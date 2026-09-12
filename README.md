@@ -1,6 +1,6 @@
-# LaunchForge
+# AfterPush
 
-LaunchForge is an advanced Cloud & DevOps learning project focused on building a production-style application deployment platform on AWS.
+AfterPush is an advanced Cloud & DevOps learning project focused on building a production-style application deployment platform on AWS.
 
 The goal of this project is not only to deploy an application, but to understand how modern cloud infrastructure, containerization, networking, infrastructure automation and CI/CD pipelines work together in a real-world architecture.
 
@@ -34,7 +34,7 @@ The goal of this project is not only to deploy an application, but to understand
     Docker Image
   </text>
   <text x=160 y=102 fontFamily=Arial fontSize=9 fill="#0369A1" textAnchor="middle">
-    launchforge-api:v1
+    afterpush-api:v1
   </text>
   <path d="M160 116 V130" stroke="#9CA3AF" strokeWidth=1.5 strokeLinecap="round"/>
   <polygon points="156,126 164,126 160,132" fill="#9CA3AF"/>
@@ -154,8 +154,8 @@ Traffic is restricted using Security Groups.
 Clone the repository.
 
 ```bash
-git clone https://github.com/EthemKesim/LaunchForge.git
-cd LaunchForge/app
+git clone https://github.com/EthemKesim/AfterPush.git
+cd AfterPush/app
 ```
 
 Install dependencies.
@@ -181,13 +181,13 @@ curl http://localhost:3000/health
 Build the Docker image.
 
 ```bash
-docker build -t launchforge-api:v1 .
+docker build -t afterpush-api:v1 .
 ```
 
 Run the container locally.
 
 ```bash
-docker run -p 3000:3000 launchforge-api:v1
+docker run -p 3000:3000 afterpush-api:v1
 ```
 
 Verify that the API is running.
@@ -249,7 +249,7 @@ Later this workflow will become fully automated using Terraform and GitHub Actio
 
 ## Learning Philosophy
 
-LaunchForge is intentionally built step by step instead of using one-click infrastructure.
+AfterPush is intentionally built step by step instead of using one-click infrastructure.
 
 Every AWS resource is first created manually to understand its purpose, and later the same infrastructure will be recreated using Terraform and automated through CI/CD pipelines.
 
