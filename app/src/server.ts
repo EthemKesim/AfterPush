@@ -8,8 +8,8 @@ app.use(express.json());
 
 app.get("/", (_req, res) => {
   res.json({
-    service: "launchforge-api",
-    message: "LaunchForge API is running"
+    service: "afterpush-api",
+    message: "AfterPush API is running"
   });
 });
 
@@ -21,11 +21,11 @@ app.get("/health", (_req, res) => {
 
 app.get("/version", (_req, res) => {
   res.json({
-    service: "launchforge-api",
+    service: "afterpush-api",
     version: "1.0.0"
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`LaunchForge API running on port ${PORT}`);
+  console.log(`AfterPush API running on port ${PORT}`);
 });

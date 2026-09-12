@@ -1,7 +1,7 @@
 {
-  "name": "launchforge-api",
+  "name": "afterpush-api",
   "version": "1.0.0",
-  "description": "Backend service used by the LaunchForge deployment platform",
+  "description": "Backend service used by the AfterPush deployment platform",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -9,7 +9,7 @@
     "start": "node dist/server.js"
   },
   "keywords": [
-    "launchforge",
+    "afterpush",
     "devops",
     "aws"
   ],
