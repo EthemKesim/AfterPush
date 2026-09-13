@@ -1,4 +1,4 @@
-name: CD - Build and Push to ECR
+name: CD - Deploy to ECS
 
 on:
   push:
@@ -12,10 +12,14 @@ permissions:
 env:
   AWS_REGION: eu-central-1
   ECR_REPOSITORY: launchforge-api
+  ECS_CLUSTER: launchforge-cluster
+  ECS_SERVICE: launchforge-api-service
+  ECS_TASK_DEFINITION: ecs-task-definition.json
+  CONTAINER_NAME: launchforge-api
 
 jobs:
-  build-and-push:
-    name: Build ARM64 image and push to ECR
+  deploy:
+    name: Build, Push and Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +44,7 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Build and push ARM64 image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./app
           platforms: linux/arm64
@@ -48,3 +52,19 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+
+      - name: Render Amazon ECS task definition
+        id: render-task-definition
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
