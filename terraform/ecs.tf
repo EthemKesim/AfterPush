@@ -99,4 +99,10 @@ resource "aws_ecs_service" "api" {
     Name    = "${var.project_name}-api-service"
     Project = var.project_name
   }
+
+  lifecycle {
+    ignore_changes = [
+      task_definition
+    ]
+  }
 }
