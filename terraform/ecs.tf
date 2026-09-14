@@ -76,6 +76,11 @@ resource "aws_ecs_service" "api" {
 
   health_check_grace_period_seconds = 30
 
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   network_configuration {
     subnets = [
       aws_subnet.main["public-a"].id,
