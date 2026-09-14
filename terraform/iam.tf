@@ -117,6 +117,16 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
         ]
 
         Resource = aws_iam_role.ecs_execution.arn
+      },
+      {
+        Sid    = "DescribeLoadBalancer"
+        Effect = "Allow"
+
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers"
+        ]
+
+        Resource = "*"
       }
     ]
   })
