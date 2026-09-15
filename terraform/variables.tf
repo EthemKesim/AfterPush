@@ -51,3 +51,9 @@ variable "subnets" {
     }
   }
 }
+
+variable "alert_email" {
+  description = "Email address that receives AfterPush CloudWatch alerts"
+  type        = string
+  sensitive   = true
+}
