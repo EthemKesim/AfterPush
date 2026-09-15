@@ -26,12 +26,6 @@ app.get("/version", (_req, res) => {
   });
 });
 
-app.get("/test/error", (_req, res) => {
-  res.status(500).json({
-    error: "Intentional test error"
-  });
-});
-
 app.listen(PORT, () => {
   console.log(`AfterPush API running on port ${PORT}`);
 });
