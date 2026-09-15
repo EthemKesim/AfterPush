@@ -18,10 +18,17 @@ app.get("/health", (_req, res) => {
     status: "healthy"
   });
 });
+
 app.get("/version", (_req, res) => {
   res.json({
     service: "afterpush-api",
     version: "1.0.0"
+  });
+});
+
+app.get("/test/error", (_req, res) => {
+  res.status(500).json({
+    error: "Intentional test error"
   });
 });
 

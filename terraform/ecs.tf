@@ -71,7 +71,7 @@ resource "aws_ecs_service" "api" {
   desired_count = 1
   launch_type   = "FARGATE"
 
-  platform_version              = "LATEST"
+  platform_version              = "1.4.0"
   availability_zone_rebalancing = "ENABLED"
 
   health_check_grace_period_seconds = 30
