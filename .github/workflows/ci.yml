@@ -37,3 +37,32 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t afterpush-api:ci .
+
+      - name: Run Docker container
+        run: |
+          docker run -d \
+            --name afterpush-api-test \
+            -p 3000:3000 \
+            afterpush-api:ci
+
+      - name: Test health endpoint
+        run: |
+          echo "Waiting for application to start..."
+
+          for i in {1..10}; do
+            if curl --fail http://localhost:3000/health; then
+              echo "Health check passed"
+              exit 0
+            fi
+
+            echo "Application not ready yet. Retrying..."
+            sleep 2
+          done
+
+          echo "Health check failed"
+          docker logs afterpush-api-test
+          exit 1
+
+      - name: Stop test container
+        if: always()
+        run: docker rm -f afterpush-api-test

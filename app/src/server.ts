@@ -14,8 +14,8 @@ app.get("/", (_req, res) => {
 });
 
 app.get("/health", (_req, res) => {
-  res.status(500).json({
-    status: "unhealthy"
+  res.status(200).json({
+    status: "healthy"
   });
 });
 app.get("/version", (_req, res) => {
