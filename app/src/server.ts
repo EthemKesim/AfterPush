@@ -26,6 +26,18 @@ app.get("/version", (_req, res) => {
   });
 });
 
+app.get("/test/cpu", (_req, res) => {
+  const end = Date.now() + 5000;
+
+  while (Date.now() < end) {
+    Math.sqrt(Math.random());
+  }
+
+  res.json({
+    message: "CPU load test completed"
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`AfterPush API running on port ${PORT}`);
 });
