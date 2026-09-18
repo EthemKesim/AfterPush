@@ -32,11 +32,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint application
+        run: npm run lint
+
+      - name: Run application tests
+        run: npm test
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
       - name: Build TypeScript application
         run: npm run build
 
       - name: Build Docker image
         run: docker build -t afterpush-api:ci .
+
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: afterpush-api:ci
+          scan-type: image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
 
       - name: Run Docker container
         run: |
