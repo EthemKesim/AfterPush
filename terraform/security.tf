@@ -19,6 +19,7 @@ resource "aws_security_group" "ecs" {
     Project = var.project_name
   }
 }
+
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
 
@@ -41,13 +42,15 @@ resource "aws_vpc_security_group_ingress_rule" "ecs_from_alb" {
   description = "Allow application traffic only from the ALB"
 }
 
-resource "aws_vpc_security_group_egress_rule" "alb_all" {
+resource "aws_vpc_security_group_egress_rule" "alb_to_ecs" {
   security_group_id = aws_security_group.alb.id
 
-  cidr_ipv4   = "0.0.0.0/0"
-  ip_protocol = "-1"
+  referenced_security_group_id = aws_security_group.ecs.id
+  from_port                    = 3000
+  to_port                      = 3000
+  ip_protocol                  = "tcp"
 
-  description = "Allow all outbound traffic"
+  description = "Allow ALB traffic to ECS tasks on port 3000"
 }
 
 resource "aws_vpc_security_group_egress_rule" "ecs_all" {
