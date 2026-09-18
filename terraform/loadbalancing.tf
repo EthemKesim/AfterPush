@@ -1,8 +1,9 @@
 resource "aws_lb" "main" {
-  name               = "launchforge-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
+  name                       = "launchforge-alb"
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  drop_invalid_header_fields = true
 
   subnets = [
     aws_subnet.main["public-a"].id,
