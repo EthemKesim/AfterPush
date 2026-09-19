@@ -61,3 +61,25 @@ resource "aws_vpc_security_group_egress_rule" "ecs_all" {
 
   description = "Allow all outbound traffic"
 }
+
+resource "aws_security_group" "vpc_endpoints" {
+  name        = "launchforge-vpc-endpoints-sg"
+  description = "Security group for VPC interface endpoints"
+  vpc_id      = aws_vpc.main.id
+
+  tags = {
+    Name    = "${var.project_name}-vpc-endpoints-sg"
+    Project = var.project_name
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_ecs" {
+  security_group_id = aws_security_group.vpc_endpoints.id
+
+  referenced_security_group_id = aws_security_group.ecs.id
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+
+  description = "Allow HTTPS traffic from ECS tasks"
+}
