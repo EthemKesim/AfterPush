@@ -47,7 +47,7 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: |
-                  ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
       - name: Render Amazon ECS task definition
         id: render-task-definition

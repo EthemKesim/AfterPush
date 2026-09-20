@@ -20,7 +20,7 @@ app.get("/health", (_req, res) => {
 app.get("/version", (_req, res) => {
   res.json({
     service: "afterpush-api",
-    version: "1.0.0"
+    version: "1.1.0"
   });
 });
 
