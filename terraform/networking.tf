@@ -78,3 +78,18 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.main[each.key].id
   route_table_id = aws_route_table.private.id
 }
+
+resource "aws_flow_log" "main" {
+  vpc_id = aws_vpc.main.id
+
+  traffic_type = "ALL"
+
+  log_destination_type = "cloud-watch-logs"
+  log_destination      = aws_cloudwatch_log_group.vpc_flow.arn
+  iam_role_arn         = aws_iam_role.vpc_flow_logs.arn
+
+  tags = {
+    Name    = "${var.project_name}-vpc-flow-log"
+    Project = var.project_name
+  }
+}
