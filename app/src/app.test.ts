@@ -29,7 +29,7 @@ describe("AfterPush API", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       service: "afterpush-api",
-      version: "1.1.0"
+      version: "1.2.0"
     });
   });
 });
