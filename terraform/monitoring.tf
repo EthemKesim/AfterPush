@@ -191,7 +191,8 @@ resource "aws_cloudwatch_dashboard" "main" {
 }
 
 resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-alerts"
+  name              = "${var.project_name}-alerts"
+  kms_master_key_id = "alias/aws/sns"
 
   tags = {
     Name    = "${var.project_name}-alerts"
