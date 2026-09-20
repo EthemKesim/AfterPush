@@ -181,3 +181,33 @@ resource "aws_iam_role_policy" "vpc_flow_logs" {
     ]
   })
 }
+
+resource "aws_iam_role" "ecs_infrastructure_lb" {
+  name = "${var.project_name}-ecs-infrastructure-lb-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          Service = "ecs.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "${var.project_name}-ecs-infrastructure-lb-role"
+    Project = var.project_name
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_infrastructure_lb" {
+  role       = aws_iam_role.ecs_infrastructure_lb.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonECSInfrastructureRolePolicyForLoadBalancers"
+}

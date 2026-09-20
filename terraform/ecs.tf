@@ -76,9 +76,9 @@ resource "aws_ecs_service" "api" {
 
   health_check_grace_period_seconds = 30
 
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
+  deployment_configuration {
+    strategy             = "BLUE_GREEN"
+    bake_time_in_minutes = 2
   }
 
   network_configuration {
@@ -98,6 +98,12 @@ resource "aws_ecs_service" "api" {
     target_group_arn = aws_lb_target_group.api.arn
     container_name   = "launchforge-api"
     container_port   = 3000
+
+    advanced_configuration {
+      alternate_target_group_arn = aws_lb_target_group.api_green.arn
+      production_listener_rule   = aws_lb_listener_rule.production.arn
+      role_arn                   = aws_iam_role.ecs_infrastructure_lb.arn
+    }
   }
 
   tags = {
