@@ -3,6 +3,7 @@ kind: ConfigMap
 
 metadata:
   name: afterpush-api-config
+  namespace: afterpush-dev
 
 data:
   APP_ENV: "local"

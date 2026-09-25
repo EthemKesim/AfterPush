@@ -3,6 +3,7 @@ kind: Deployment
 
 metadata:
   name: afterpush-api
+  namespace: afterpush-dev
 
 spec:
   replicas: 2
