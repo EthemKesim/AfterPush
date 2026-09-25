@@ -27,3 +27,6 @@ crash.log
 
 # Misc
 *.log
+
+# Local Kubernetes secrets
+k8s/secret.yaml

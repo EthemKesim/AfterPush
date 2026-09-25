@@ -25,6 +25,12 @@ spec:
           ports:
             - containerPort: 3000
 
+          envFrom:
+            - configMapRef:
+               name: afterpush-api-config
+            - secretRef:
+               name: afterpush-api-secret
+
           readinessProbe:
             httpGet:
               path: /health
@@ -38,8 +44,8 @@ spec:
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 10
-    
-      resources:
+
+          resources:
             requests:
               cpu: "100m"
               memory: "128Mi"
