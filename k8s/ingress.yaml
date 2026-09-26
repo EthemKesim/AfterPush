@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+metadata:
+  name: afterpush-api
+  namespace: afterpush-dev
+
+spec:
+  ingressClassName: nginx
+
+  rules:
+    - host: afterpush.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: afterpush-api
+                port:
+                  number: 80
