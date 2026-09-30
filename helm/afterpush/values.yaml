@@ -12,7 +12,7 @@ service:
 
 config:
   appEnv: local
-  logLevel: info
+  logLevel: debug
 
 ingress:
   enabled: true
