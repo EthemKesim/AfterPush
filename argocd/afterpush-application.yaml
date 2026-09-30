@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: afterpush
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/EthemKesim/AfterPush.git
+    targetRevision: main
+    path: helm/afterpush
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: afterpush-dev
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
