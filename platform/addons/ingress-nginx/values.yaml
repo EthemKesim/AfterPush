@@ -1,0 +1,9 @@
+controller:
+  hostPort:
+    enabled: true
+
+  nodeSelector:
+    kubernetes.io/os: linux
+
+  service:
+    type: LoadBalancer
