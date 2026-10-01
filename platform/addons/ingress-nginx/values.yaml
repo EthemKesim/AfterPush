@@ -6,4 +6,4 @@ controller:
     kubernetes.io/os: linux
 
   service:
-    type: LoadBalancer
+    type: ClusterIP
