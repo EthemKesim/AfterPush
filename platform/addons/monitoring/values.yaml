@@ -21,3 +21,17 @@ kubeStateMetrics:
 
 nodeExporter:
   enabled: true
+
+# kind control-plane components expose their metrics only on
+# the node's localhost by default, so Prometheus cannot scrape them.
+kubeControllerManager:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeProxy:
+  enabled: false
