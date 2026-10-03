@@ -8,6 +8,7 @@ metadata:
 
 spec:
   groups:
+    # Normal operational alerts
     - name: afterpush.rules
       rules:
         - alert: AfterPushTargetDown
@@ -18,7 +19,6 @@ spec:
           annotations:
             summary: "AfterPush target is down"
             description: "Prometheus has been unable to scrape an AfterPush target for more than 2 minutes."
-{{- end }}
 
         - alert: AfterPushHighErrorRate
           expr: |
@@ -48,3 +48,120 @@ spec:
           annotations:
             summary: "AfterPush p95 latency is high"
             description: "AfterPush p95 request latency has been above 500 ms for at least 5 minutes."
+
+    # SLO recording rules and SLO-aware alerts
+    - name: afterpush.slo
+      rules:
+        # ------------------------------------------------
+        # ERROR RATE RECORDING RULES
+        # ------------------------------------------------
+
+        # Short window: last 5 minutes
+        - record: afterpush:slo_error_rate:5m
+          expr: |
+            (
+              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[5m]))
+              or vector(0)
+            )
+            /
+            sum(rate(afterpush_http_requests_total{route!="/health"}[5m]))
+
+        # Long window for fast-burn detection: last 1 hour
+        - record: afterpush:slo_error_rate:1h
+          expr: |
+            (
+              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[1h]))
+              or vector(0)
+            )
+            /
+            sum(rate(afterpush_http_requests_total{route!="/health"}[1h]))
+
+        # Short window for slow-burn detection: last 30 minutes
+        - record: afterpush:slo_error_rate:30m
+          expr: |
+            (
+              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[30m]))
+              or vector(0)
+            )
+            /
+            sum(rate(afterpush_http_requests_total{route!="/health"}[30m]))
+
+        # Long window for slow-burn detection: last 6 hours
+        - record: afterpush:slo_error_rate:6h
+          expr: |
+            (
+              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[6h]))
+              or vector(0)
+            )
+            /
+            sum(rate(afterpush_http_requests_total{route!="/health"}[6h]))
+
+        # ------------------------------------------------
+        # BURN RATE RECORDING RULES
+        # ------------------------------------------------
+        #
+        # Learning SLO: 99.9%
+        # Error budget: 0.1% = 0.001
+        #
+        # Burn Rate = Error Rate / Error Budget
+        #
+
+        - record: afterpush:slo_burn_rate:5m
+          expr: afterpush:slo_error_rate:5m / 0.001
+
+        - record: afterpush:slo_burn_rate:1h
+          expr: afterpush:slo_error_rate:1h / 0.001
+
+        - record: afterpush:slo_burn_rate:30m
+          expr: afterpush:slo_error_rate:30m / 0.001
+
+        - record: afterpush:slo_burn_rate:6h
+          expr: afterpush:slo_error_rate:6h / 0.001
+
+        # ------------------------------------------------
+        # FAST ERROR-BUDGET BURN
+        # ------------------------------------------------
+        #
+        # Detects a severe problem that is consuming
+        # the error budget very quickly.
+        #
+        # Both windows must agree:
+        #   5m  > 14.4x
+        #   1h  > 14.4x
+        #
+
+        - alert: AfterPushSLOBudgetBurnFast
+          expr: |
+            afterpush:slo_burn_rate:5m > 14.4
+            and
+            afterpush:slo_burn_rate:1h > 14.4
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "AfterPush is burning its error budget too quickly"
+            description: "AfterPush is consuming the 99.9% availability SLO error budget at more than 14.4x the expected rate."
+
+        # ------------------------------------------------
+        # SLOW ERROR-BUDGET BURN
+        # ------------------------------------------------
+        #
+        # Detects a less severe but persistent problem.
+        #
+        # Both windows must agree:
+        #   30m > 6x
+        #   6h  > 6x
+        #
+
+        - alert: AfterPushSLOBudgetBurnSlow
+          expr: |
+            afterpush:slo_burn_rate:30m > 6
+            and
+            afterpush:slo_burn_rate:6h > 6
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AfterPush is steadily consuming its error budget"
+            description: "AfterPush is consuming the 99.9% availability SLO error budget at more than 6x the expected rate over longer time windows."
+{{- end }}
