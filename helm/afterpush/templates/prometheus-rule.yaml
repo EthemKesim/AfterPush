@@ -1,0 +1,50 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: afterpush-alerts
+  labels:
+    release: monitoring
+
+spec:
+  groups:
+    - name: afterpush.rules
+      rules:
+        - alert: AfterPushTargetDown
+          expr: up{namespace="afterpush-dev", job="afterpush-api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "AfterPush target is down"
+            description: "Prometheus has been unable to scrape an AfterPush target for more than 2 minutes."
+{{- end }}
+
+        - alert: AfterPushHighErrorRate
+          expr: |
+            (
+              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[5m]))
+              /
+              sum(rate(afterpush_http_requests_total{route!="/health"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AfterPush has a high HTTP 5xx error rate"
+            description: "More than 5% of AfterPush user requests have returned HTTP 5xx responses for at least 5 minutes."
+
+        - alert: AfterPushHighP95Latency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(afterpush_http_request_duration_seconds_bucket{route!="/health"}[5m])
+              )
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AfterPush p95 latency is high"
+            description: "AfterPush p95 request latency has been above 500 ms for at least 5 minutes."
