@@ -1,0 +1,19 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+
+metadata:
+  name: afterpush-api
+  labels:
+    release: monitoring
+
+spec:
+  selector:
+    matchLabels:
+      app: afterpush-api
+
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}

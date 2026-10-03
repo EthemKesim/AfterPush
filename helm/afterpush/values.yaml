@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: afterpush-api
-  tag: local
+  tag: metrics  
   pullPolicy: Never
 
 service:
@@ -45,3 +45,7 @@ probes:
     path: /health
     initialDelaySeconds: 5
     periodSeconds: 10
+  
+
+monitoring:
+  enabled: true
