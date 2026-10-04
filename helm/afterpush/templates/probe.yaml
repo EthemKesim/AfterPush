@@ -1,0 +1,24 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+
+metadata:
+  name: afterpush-http
+  labels:
+    release: monitoring
+
+spec:
+  jobName: afterpush-blackbox
+
+  interval: 15s
+
+  module: afterpush_http_2xx
+
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+
+  targets:
+    staticConfig:
+      static:
+        - http://ingress-nginx-controller.ingress-nginx.svc.cluster.local/health
+{{- end }}
