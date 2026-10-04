@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -21,7 +22,7 @@ CHART_PATH = (
 def render_chart() -> str:
     generated_values = subprocess.run(
         [
-            "python",
+            sys.executable,
             str(GENERATOR_PATH),
             str(CONFIG_PATH),
         ],

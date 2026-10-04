@@ -119,3 +119,44 @@ jobs:
           scan-ref: terraform/
           severity: HIGH,CRITICAL
           exit-code: '0'
+
+  platform:
+    name: Platform Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: platform/pyproject.toml
+
+      - name: Install platform dependencies
+        run: python -m pip install -e "platform[dev]"
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v4.3.0"
+
+      - name: Validate example application config
+        run: afterpush validate platform/examples/afterpush.yaml
+
+      - name: Run platform tests
+        run: python -m pytest platform/tests -v
+
+      - name: Lint Helm chart
+        run: helm lint helm/afterpush
+
+      - name: Render Helm chart
+        run: |
+          afterpush render platform/examples/afterpush.yaml \
+            > /tmp/afterpush-values.yaml
+
+          helm template demo-api helm/afterpush \
+            -f /tmp/afterpush-values.yaml \
+            > /tmp/afterpush-rendered.yaml

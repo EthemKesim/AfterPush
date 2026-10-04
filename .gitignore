@@ -36,3 +36,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+
+# Python package metadata
+*.egg-info/
