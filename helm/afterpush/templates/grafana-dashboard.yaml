@@ -271,6 +271,72 @@ data:
               "mode": "multi"
             }
           }
+        },
+        {
+          "type": "stat",
+          "title": "Outside-In Availability",
+          "id": 8,
+          "description": "Blackbox probe result through the Kubernetes ingress path. UP means the application is reachable through ingress; DOWN means the probe failed.",
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 30
+          },
+          "targets": [
+            {
+              "expr": "probe_success{namespace=\"afterpush-dev\",job=\"afterpush-blackbox\"}",
+              "legendFormat": "AfterPush availability",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "decimals": 0,
+              "min": 0,
+              "max": 1,
+              "mappings": [
+                {
+                  "type": "value",
+                  "options": {
+                    "0": {
+                      "text": "DOWN"
+                    },
+                    "1": {
+                      "text": "UP"
+                    }
+                  }
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "fields": "",
+              "values": false
+            },
+            "textMode": "auto",
+            "wideLayout": true
+          }
         }
       ],
       "refresh": "10s",
@@ -279,7 +345,8 @@ data:
         "afterpush",
         "observability",
         "slo",
-        "sre"
+        "sre",
+        "blackbox"
       ],
       "templating": {
         "list": []
@@ -291,6 +358,6 @@ data:
       "timezone": "browser",
       "title": "AfterPush Observability",
       "uid": "afterpush-observability",
-      "version": 3
+      "version": 4
     }
 {{- end }}
