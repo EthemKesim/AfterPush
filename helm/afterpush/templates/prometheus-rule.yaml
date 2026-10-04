@@ -1,6 +1,7 @@
 {{- if .Values.monitoring.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
+
 metadata:
   name: afterpush-alerts
   labels:
@@ -49,23 +50,23 @@ spec:
             summary: "AfterPush p95 latency is high"
             description: "AfterPush p95 request latency has been above 500 ms for at least 5 minutes."
 
-    - alert: AfterPushDeploymentDegraded
-      expr: |
-        kube_deployment_status_replicas_available{
-          namespace="afterpush-dev",
-          deployment="afterpush-api"
-        }
-        <
-        kube_deployment_spec_replicas{
-          namespace="afterpush-dev",
-          deployment="afterpush-api"
-        }
-      for: 1m
-      labels:
-        severity: warning
-      annotations:
-        summary: "AfterPush deployment has unavailable replicas"
-        description: "The AfterPush Deployment has had fewer available replicas than desired for more than 1 minute."
+        - alert: AfterPushDeploymentDegraded
+          expr: |
+            kube_deployment_status_replicas_available{
+              namespace="afterpush-dev",
+              deployment="afterpush-api"
+            }
+            <
+            kube_deployment_spec_replicas{
+              namespace="afterpush-dev",
+              deployment="afterpush-api"
+            }
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AfterPush deployment has unavailable replicas"
+            description: "The AfterPush Deployment has had fewer available replicas than desired for more than 1 minute."
 
     # SLO recording rules and SLO-aware alerts
     - name: afterpush.slo
@@ -144,8 +145,8 @@ spec:
         # the error budget very quickly.
         #
         # Both windows must agree:
-        #   5m  > 14.4x
-        #   1h  > 14.4x
+        #   5m > 14.4x
+        #   1h > 14.4x
         #
 
         - alert: AfterPushSLOBudgetBurnFast
@@ -168,7 +169,7 @@ spec:
         #
         # Both windows must agree:
         #   30m > 6x
-        #   6h  > 6x
+        #   6h > 6x
         #
 
         - alert: AfterPushSLOBudgetBurnSlow
