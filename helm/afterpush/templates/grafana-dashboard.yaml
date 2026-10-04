@@ -141,13 +141,132 @@ data:
               "mode": "single"
             }
           }
+        },
+        {
+          "type": "stat",
+          "title": "SLO Success Rate",
+          "id": 5,
+          "description": "Successful user-request percentage derived from the 5-minute SLO error-rate recording rule.",
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 0,
+            "y": 15
+          },
+          "targets": [
+            {
+              "expr": "100 * (1 - afterpush:slo_error_rate:5m)",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 3,
+              "min": 0,
+              "max": 100
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "orientation": "auto",
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Fast Error Budget Burn Rate",
+          "id": 6,
+          "description": "Burn rate used by the critical fast-burn SLO alert. The alert requires both 5m and 1h burn rates to exceed 14.4x.",
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 0,
+            "y": 21
+          },
+          "targets": [
+            {
+              "expr": "afterpush:slo_burn_rate:5m",
+              "legendFormat": "5m burn rate",
+              "refId": "A"
+            },
+            {
+              "expr": "afterpush:slo_burn_rate:1h",
+              "legendFormat": "1h burn rate",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 2,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Slow Error Budget Burn Rate",
+          "id": 7,
+          "description": "Burn rate used by the warning slow-burn SLO alert. The alert requires both 30m and 6h burn rates to exceed 6x.",
+          "gridPos": {
+            "h": 9,
+            "w": 12,
+            "x": 12,
+            "y": 21
+          },
+          "targets": [
+            {
+              "expr": "afterpush:slo_burn_rate:30m",
+              "legendFormat": "30m burn rate",
+              "refId": "A"
+            },
+            {
+              "expr": "afterpush:slo_burn_rate:6h",
+              "legendFormat": "6h burn rate",
+              "refId": "B"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 2,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
         }
       ],
       "refresh": "10s",
       "schemaVersion": 42,
       "tags": [
         "afterpush",
-        "observability"
+        "observability",
+        "slo",
+        "sre"
       ],
       "templating": {
         "list": []
@@ -159,6 +278,6 @@ data:
       "timezone": "browser",
       "title": "AfterPush Observability",
       "uid": "afterpush-observability",
-      "version": 1
+      "version": 2
     }
 {{- end }}
