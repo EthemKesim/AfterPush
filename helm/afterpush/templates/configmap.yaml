@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: afterpush-api-config
+  name: {{ .Values.application.name }}-config
 
 data:
   APP_ENV: {{ .Values.config.appEnv | quote }}

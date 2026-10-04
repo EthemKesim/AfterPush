@@ -28,7 +28,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(up{namespace=\"afterpush-dev\", job=\"afterpush-api\"})",
+             "expr": "sum(up{namespace=\"afterpush-dev\", job=\"{{ .Values.application.name }}\"})",
               "refId": "A"
             }
           ],

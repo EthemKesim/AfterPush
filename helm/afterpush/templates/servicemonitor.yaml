@@ -3,14 +3,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 
 metadata:
-  name: afterpush-api
+  name: {{ .Values.application.name }}
   labels:
     release: monitoring
 
 spec:
   selector:
     matchLabels:
-      app: afterpush-api
+      app: {{ .Values.application.name }}
 
   endpoints:
     - port: http

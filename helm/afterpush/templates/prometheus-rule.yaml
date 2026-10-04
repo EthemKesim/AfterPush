@@ -13,7 +13,7 @@ spec:
     - name: afterpush.rules
       rules:
         - alert: AfterPushTargetDown
-          expr: up{namespace="afterpush-dev", job="afterpush-api"} == 0
+          expr: up{namespace="afterpush-dev", job="{{ .Values.application.name }}"} == 0
           for: 2m
           labels:
             severity: critical
@@ -54,12 +54,12 @@ spec:
           expr: |
             kube_deployment_status_replicas_available{
               namespace="afterpush-dev",
-              deployment="afterpush-api"
+              deployment="{{ .Values.application.name }}"
             }
             <
             kube_deployment_spec_replicas{
               namespace="afterpush-dev",
-              deployment="afterpush-api"
+              deployment="{{ .Values.application.name }}"
             }
           for: 1m
           labels:

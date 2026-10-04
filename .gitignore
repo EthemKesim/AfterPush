@@ -30,3 +30,9 @@ crash.log
 
 # Local Kubernetes secrets
 k8s/secret.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/

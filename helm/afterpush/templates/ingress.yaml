@@ -3,7 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: afterpush-api
+  name: {{ .Values.application.name }}
 
 spec:
   ingressClassName: {{ .Values.ingress.className }}
@@ -16,7 +16,7 @@ spec:
             pathType: {{ .Values.ingress.pathType }}
             backend:
               service:
-                name: afterpush-api
+                name: {{ .Values.application.name }}
                 port:
                   number: {{ .Values.service.port }}
 {{- end }}
