@@ -49,6 +49,24 @@ spec:
             summary: "AfterPush p95 latency is high"
             description: "AfterPush p95 request latency has been above 500 ms for at least 5 minutes."
 
+    - alert: AfterPushDeploymentDegraded
+      expr: |
+        kube_deployment_status_replicas_available{
+          namespace="afterpush-dev",
+          deployment="afterpush-api"
+        }
+        <
+        kube_deployment_spec_replicas{
+          namespace="afterpush-dev",
+          deployment="afterpush-api"
+        }
+      for: 1m
+      labels:
+        severity: warning
+      annotations:
+        summary: "AfterPush deployment has unavailable replicas"
+        description: "The AfterPush Deployment has had fewer available replicas than desired for more than 1 minute."
+
     # SLO recording rules and SLO-aware alerts
     - name: afterpush.slo
       rules:
