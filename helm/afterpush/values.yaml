@@ -1,8 +1,15 @@
+application:
+  name: afterpush-api
+
+environment:
+  name: local
+  namespace: afterpush-dev
+
 replicaCount: 2
 
 image:
   repository: afterpush-api
-  tag: metrics  
+  tag: metrics
   pullPolicy: Never
 
 service:
@@ -45,7 +52,6 @@ probes:
     path: /health
     initialDelaySeconds: 5
     periodSeconds: 10
-  
 
 monitoring:
   enabled: true

@@ -81,3 +81,13 @@ def test_helm_chart_does_not_use_old_application_identity():
     assert "name: afterpush-api\n" not in rendered
     assert "app: afterpush-api" not in rendered
     assert 'job="afterpush-api"' not in rendered
+
+def test_helm_templates_do_not_hardcode_environment_namespace():
+    templates_path = CHART_PATH / "templates"
+
+    for template_path in templates_path.glob("*.yaml"):
+        template = template_path.read_text(encoding="utf-8")
+
+        assert "afterpush-dev" not in template, (
+            f"{template_path.name} contains a hardcoded environment namespace."
+        )
