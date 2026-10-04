@@ -183,4 +183,30 @@ spec:
           annotations:
             summary: "AfterPush is steadily consuming its error budget"
             description: "AfterPush is consuming the 99.9% availability SLO error budget at more than 6x the expected rate over longer time windows."
+
+        # ------------------------------------------------
+        # OUTSIDE-IN AVAILABILITY
+        # ------------------------------------------------
+        #
+        # Blackbox Exporter tests the application from
+        # outside the application process through the
+        # Ingress -> Service -> Pod path.
+        #
+        # probe_success:
+        #   1 = probe succeeded
+        #   0 = probe failed
+        #
+
+        - alert: AfterPushBlackboxProbeFailed
+          expr: |
+            probe_success{
+              namespace="afterpush-dev",
+              job="afterpush-blackbox"
+            } == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "AfterPush is unreachable from the blackbox probe"
+            description: "The external availability probe has failed continuously for more than 1 minute."
 {{- end }}
