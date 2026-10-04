@@ -10,15 +10,10 @@ from afterpush_engine.pipeline import (
     build_helm_values,
 )
 from afterpush_engine.validation import (
-    load_json,
+    load_schema,
     load_yaml,
     validate_config,
 )
-
-
-PLATFORM_ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = PLATFORM_ROOT / "schema/afterpush.schema.json"
-
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -57,7 +52,7 @@ def create_parser() -> argparse.ArgumentParser:
 def validate_command(config_path: Path) -> int:
     try:
         config = load_yaml(config_path)
-        schema = load_json(SCHEMA_PATH)
+        schema = load_schema()
     except FileNotFoundError as error:
         print(f"✗ File not found: {error.filename}", file=sys.stderr)
         return 1
@@ -84,10 +79,9 @@ def validate_command(config_path: Path) -> int:
 
 def render_command(config_path: Path) -> int:
     try:
-        values = build_helm_values(
+       values = build_helm_values(
             config_path=config_path,
-            schema_path=SCHEMA_PATH,
-        )
+)
     except FileNotFoundError as error:
         print(f"✗ File not found: {error.filename}", file=sys.stderr)
         return 1

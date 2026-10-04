@@ -39,3 +39,7 @@ __pycache__/
 
 # Python package metadata
 *.egg-info/
+
+# Python build artifacts
+platform/build/
+platform/dist/

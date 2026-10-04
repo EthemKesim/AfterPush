@@ -26,3 +26,6 @@ include = [
     "afterpush_cli*",
     "afterpush_engine*",
 ]
+
+[tool.setuptools.package-data]
+afterpush_engine = ["schema/*.json"]

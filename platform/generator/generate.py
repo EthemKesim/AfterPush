@@ -23,14 +23,9 @@ def main():
         else PROJECT_ROOT / "platform/examples/afterpush.yaml"
     )
 
-    schema_path = (
-        PROJECT_ROOT / "platform/schema/afterpush.schema.json"
-    )
-
     try:
         values = build_helm_values(
             config_path=config_path,
-            schema_path=schema_path,
         )
     except FileNotFoundError as error:
         print(f"✗ File not found: {error.filename}", file=sys.stderr)

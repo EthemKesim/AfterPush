@@ -2,7 +2,7 @@ from pathlib import Path
 
 from afterpush_engine.generation import generate_helm_values
 from afterpush_engine.validation import (
-    load_json,
+    load_schema,
     load_yaml,
     validate_config,
 )
@@ -17,12 +17,9 @@ class ConfigurationValidationError(Exception):
         )
 
 
-def build_helm_values(
-    config_path: Path,
-    schema_path: Path,
-) -> dict:
+def build_helm_values(config_path: Path) -> dict:
     config = load_yaml(config_path)
-    schema = load_json(schema_path)
+    schema = load_schema()
 
     errors = validate_config(config, schema)
 

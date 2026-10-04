@@ -4,14 +4,21 @@ from pathlib import Path
 import yaml
 from jsonschema import Draft202012Validator
 
+from importlib.resources import files
+
 
 def load_yaml(path: Path):
     with path.open("r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
+def load_schema() -> dict:
+    schema_resource = (
+        files("afterpush_engine")
+        .joinpath("schema")
+        .joinpath("afterpush.schema.json")
+    )
 
-def load_json(path: Path):
-    with path.open("r", encoding="utf-8") as file:
+    with schema_resource.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 

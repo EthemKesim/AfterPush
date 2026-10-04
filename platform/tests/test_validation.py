@@ -11,14 +11,13 @@ if str(PLATFORM_ROOT) not in sys.path:
     sys.path.insert(0, str(PLATFORM_ROOT))
 
 from afterpush_engine.validation import (  # noqa: E402
-    load_json,
+    load_schema,
     load_yaml,
     validate_business_rules,
     validate_config,
 )
 
 
-SCHEMA_PATH = PROJECT_ROOT / "platform/schema/afterpush.schema.json"
 EXAMPLE_PATH = PROJECT_ROOT / "platform/examples/afterpush.yaml"
 
 
@@ -56,7 +55,7 @@ def get_valid_config():
 
 
 def get_schema():
-    return load_json(SCHEMA_PATH)
+    return load_schema()
 
 
 def get_schema_errors(config):

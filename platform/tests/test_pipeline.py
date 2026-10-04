@@ -16,15 +16,13 @@ from afterpush_engine.pipeline import (  # noqa: E402
 )
 
 
-SCHEMA_PATH = PLATFORM_ROOT / "schema/afterpush.schema.json"
 EXAMPLE_PATH = PLATFORM_ROOT / "examples/afterpush.yaml"
 
 
 def test_pipeline_generates_values_for_valid_config():
     values = build_helm_values(
         config_path=EXAMPLE_PATH,
-        schema_path=SCHEMA_PATH,
-    )
+)
 
     assert values["application"]["name"] == "demo-api"
     assert values["service"]["targetPort"] == 3000
@@ -58,7 +56,6 @@ spec:
     with pytest.raises(ConfigurationValidationError) as error:
         build_helm_values(
             config_path=invalid_config,
-            schema_path=SCHEMA_PATH,
         )
 
     assert any(
