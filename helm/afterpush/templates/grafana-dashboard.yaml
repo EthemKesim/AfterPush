@@ -59,7 +59,7 @@ data:
           },
           "targets": [
             {
-              "expr": "100 * sum(rate(afterpush_http_requests_total{status_code=~\"5..\",route!=\"/health\"}[5m])) / sum(rate(afterpush_http_requests_total{route!=\"/health\"}[5m]))",
+              "expr": "100 * ((sum(rate(afterpush_http_requests_total{status_code=~\"5..\",route!=\"/health\"}[5m])) or vector(0)) / sum(rate(afterpush_http_requests_total{route!=\"/health\"}[5m])))",
               "refId": "A"
             }
           ],
@@ -164,7 +164,20 @@ data:
               "unit": "percent",
               "decimals": 3,
               "min": 0,
-              "max": 100
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 99.9
+                  }
+                ]
+              }
             },
             "overrides": []
           },
@@ -278,6 +291,6 @@ data:
       "timezone": "browser",
       "title": "AfterPush Observability",
       "uid": "afterpush-observability",
-      "version": 2
+      "version": 3
     }
 {{- end }}
