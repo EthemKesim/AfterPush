@@ -1,31 +1,25 @@
-import importlib.util
+import sys
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-VALIDATOR_PATH = PROJECT_ROOT / "platform/cli/validate.py"
+PLATFORM_ROOT = PROJECT_ROOT / "platform"
+
+if str(PLATFORM_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLATFORM_ROOT))
+
+from afterpush_engine.validation import (  # noqa: E402
+    load_json,
+    load_yaml,
+    validate_business_rules,
+    validate_config,
+)
+
+
 SCHEMA_PATH = PROJECT_ROOT / "platform/schema/afterpush.schema.json"
 EXAMPLE_PATH = PROJECT_ROOT / "platform/examples/afterpush.yaml"
-
-
-def load_validator_module():
-    spec = importlib.util.spec_from_file_location(
-        "afterpush_validator",
-        VALIDATOR_PATH,
-    )
-
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Could not load AfterPush validator module.")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module
-
-
-validator_module = load_validator_module()
 
 
 def get_valid_config():
@@ -62,7 +56,7 @@ def get_valid_config():
 
 
 def get_schema():
-    return validator_module.load_json(SCHEMA_PATH)
+    return load_json(SCHEMA_PATH)
 
 
 def get_schema_errors(config):
@@ -71,10 +65,11 @@ def get_schema_errors(config):
 
 
 def test_example_config_is_valid():
-    config = validator_module.load_yaml(EXAMPLE_PATH)
+    config = load_yaml(EXAMPLE_PATH)
 
-    assert get_schema_errors(config) == []
-    assert validator_module.validate_business_rules(config) == []
+    errors = validate_config(config, get_schema())
+
+    assert errors == []
 
 
 def test_invalid_port_is_rejected():
@@ -101,7 +96,7 @@ def test_min_replicas_cannot_exceed_max_replicas():
     config["spec"]["scaling"]["minReplicas"] = 10
     config["spec"]["scaling"]["maxReplicas"] = 2
 
-    errors = validator_module.validate_business_rules(config)
+    errors = validate_business_rules(config)
 
     assert (
         "spec.scaling.minReplicas cannot be greater than "
@@ -114,7 +109,7 @@ def test_ingress_requires_host_when_enabled():
 
     del config["spec"]["ingress"]["host"]
 
-    errors = validator_module.validate_business_rules(config)
+    errors = validate_business_rules(config)
 
     assert (
         "spec.ingress.host is required when ingress is enabled."

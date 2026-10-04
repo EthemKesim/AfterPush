@@ -1,27 +1,14 @@
-import importlib.util
+import sys
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-GENERATOR_PATH = PROJECT_ROOT / "platform/generator/generate.py"
+PLATFORM_ROOT = PROJECT_ROOT / "platform"
 
+if str(PLATFORM_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLATFORM_ROOT))
 
-def load_generator_module():
-    spec = importlib.util.spec_from_file_location(
-        "afterpush_generator",
-        GENERATOR_PATH,
-    )
-
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Could not load AfterPush generator module.")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    return module
-
-
-generator_module = load_generator_module()
+from afterpush_engine.generation import generate_helm_values  # noqa: E402
 
 
 def get_config():
@@ -58,27 +45,27 @@ def get_config():
 
 
 def test_generator_maps_image():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["image"]["repository"] == "afterpush-api"
     assert values["image"]["tag"] == "metrics"
 
 
 def test_generator_maps_application_port():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["service"]["targetPort"] == 3000
 
 
 def test_generator_maps_health_path_to_both_probes():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["probes"]["readiness"]["path"] == "/health"
     assert values["probes"]["liveness"]["path"] == "/health"
 
 
 def test_generator_maps_scaling_configuration():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["autoscaling"]["enabled"] is True
     assert values["autoscaling"]["minReplicas"] == 2
@@ -90,7 +77,7 @@ def test_generator_maps_scaling_configuration():
 
 
 def test_generator_applies_platform_defaults():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["service"]["type"] == "ClusterIP"
     assert values["ingress"]["className"] == "nginx"
@@ -103,11 +90,12 @@ def test_generator_applies_platform_defaults():
 
 
 def test_generator_maps_monitoring():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["monitoring"]["enabled"] is True
 
+
 def test_generator_maps_application_name():
-    values = generator_module.generate_helm_values(get_config())
+    values = generate_helm_values(get_config())
 
     assert values["application"]["name"] == "demo-api"
