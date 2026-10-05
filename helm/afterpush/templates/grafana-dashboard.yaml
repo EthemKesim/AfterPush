@@ -28,7 +28,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(up{namespace=\"afterpush-dev\", job=\"afterpush-api\"})",
+             "expr": "sum(up{namespace=\"{{ .Values.environment.namespace }}\", job=\"{{ .Values.application.name }}\"})",
               "refId": "A"
             }
           ],
@@ -285,7 +285,7 @@ data:
           },
           "targets": [
             {
-              "expr": "probe_success{namespace=\"afterpush-dev\",job=\"afterpush-blackbox\"}",
+              "expr": "probe_success{namespace=\"{{ .Values.environment.namespace }}\",job=\"afterpush-blackbox\"}",
               "legendFormat": "AfterPush availability",
               "refId": "A"
             }

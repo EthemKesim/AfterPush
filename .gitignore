@@ -30,3 +30,16 @@ crash.log
 
 # Local Kubernetes secrets
 k8s/secret.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Python package metadata
+*.egg-info/
+
+# Python build artifacts
+platform/build/
+platform/dist/

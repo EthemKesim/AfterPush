@@ -1,0 +1,28 @@
+apiVersion: afterpush.dev/v1
+kind: Application
+
+metadata:
+  name: demo-api
+
+spec:
+  image:
+    repository: afterpush-api
+    tag: metrics
+
+  port: 3000
+
+  health:
+    path: /health
+
+  ingress:
+    enabled: true
+    host: afterpush.local
+
+  scaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilization: 50
+
+  monitoring:
+    enabled: true

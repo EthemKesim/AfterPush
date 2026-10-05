@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "afterpush-platform"
+version = "0.1.0"
+description = "Self-service application platform for AfterPush"
+requires-python = ">=3.12"
+dependencies = [
+    "PyYAML",
+    "jsonschema",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+afterpush = "afterpush_cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "afterpush_cli*",
+    "afterpush_engine*",
+]
+
+[tool.setuptools.package-data]
+afterpush_engine = ["schema/*.json"]

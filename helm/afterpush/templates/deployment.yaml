@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: afterpush-api
+  name: {{ .Values.application.name }}
   labels:
-    app: afterpush-api
+    app: {{ .Values.application.name }}
 
 spec:
   {{- if not .Values.autoscaling.enabled }}
@@ -13,30 +13,30 @@ spec:
 
   selector:
     matchLabels:
-      app: afterpush-api
+      app: {{ .Values.application.name }}
 
   template:
     metadata:
       labels:
-        app: afterpush-api
+        app: {{ .Values.application.name }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 
     spec:
       containers:
-        - name: afterpush-api
+        - name: {{ .Values.application.name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
 
           ports:
-            - containerPort: 3000
+            - containerPort: {{ .Values.service.targetPort }}
 
           envFrom:
             - configMapRef:
-                name: afterpush-api-config
+                name: {{ .Values.application.name }}-config
 
             - secretRef:
-                name: afterpush-api-secret
+                name: {{ .Values.application.name }}-secret
 
           readinessProbe:
             httpGet:
