@@ -5,6 +5,8 @@ from pathlib import Path
 
 import yaml
 
+from afterpush_engine.deployment import prepare_deployment
+
 from afterpush_engine.pipeline import (
     ConfigurationValidationError,
     build_helm_values,
@@ -46,6 +48,22 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to the afterpush.yaml configuration file.",
     )
 
+    deploy_parser = subparsers.add_parser(
+        "deploy",
+        help="Prepare GitOps deployment values for an application.",
+    )
+    deploy_parser.add_argument(
+        "config",
+        type=Path,
+        help="Path to the afterpush.yaml configuration file.",
+    )
+    deploy_parser.add_argument(
+        "--gitops-root",
+        type=Path,
+        default=Path("gitops/apps"),
+        help="GitOps applications directory.",
+    )
+
     return parser
 
 
@@ -53,6 +71,7 @@ def validate_command(config_path: Path) -> int:
     try:
         config = load_yaml(config_path)
         schema = load_schema()
+
     except FileNotFoundError as error:
         print(f"✗ File not found: {error.filename}", file=sys.stderr)
         return 1
@@ -105,8 +124,42 @@ def render_command(config_path: Path) -> int:
             sort_keys=False,
         )
     )
-
     return 0
+
+def deploy_command(
+    config_path: Path,
+    gitops_root: Path,
+) -> int:
+    try:
+        values_path = prepare_deployment(
+            config_path=config_path,
+            gitops_root=gitops_root,
+        )
+
+    except FileExistsError as error:
+        print(f"✗ {error}", file=sys.stderr)
+        return 1
+    except FileNotFoundError as error:
+        print(f"✗ File not found: {error.filename}", file=sys.stderr)
+        return 1
+    except yaml.YAMLError as error:
+        print(f"✗ Invalid YAML: {error}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as error:
+        print(f"✗ Invalid schema JSON: {error}", file=sys.stderr)
+        return 1
+    except ConfigurationValidationError as error:
+        print("✗ AfterPush configuration is invalid:\n", file=sys.stderr)
+
+        for validation_error in error.errors:
+            print(f"  - {validation_error}", file=sys.stderr)
+
+        return 1
+
+    print(f"✓ GitOps deployment prepared: {values_path}")
+    return 0
+
+
 
 
 def main() -> int:
@@ -118,6 +171,12 @@ def main() -> int:
 
     if args.command == "render":
         return render_command(args.config)
+
+    if args.command == "deploy":
+        return deploy_command(
+            args.config,
+            args.gitops_root,
+        )
 
     parser.error(f"Unknown command: {args.command}")
     return 2
