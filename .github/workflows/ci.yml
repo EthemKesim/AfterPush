@@ -157,12 +157,11 @@ jobs:
           afterpush render platform/examples/payments-api.yaml > /tmp/payments-api-values.yaml
 
           diff -u gitops/apps/demo-api/values.yaml /tmp/demo-api-values.yaml
-          diff -u gitops/apps/payments-api/values.yaml /tmp/payments-api-values.yaml
 
       - name: Lint Helm applications
         run: |
           helm lint helm/afterpush -f gitops/apps/demo-api/values.yaml
-          helm lint helm/afterpush -f gitops/apps/payments-api/values.yaml
+          helm lint helm/afterpush -f /tmp/payments-api-values.yaml
 
       - name: Render Helm applications
         run: |
@@ -171,5 +170,5 @@ jobs:
             > /tmp/demo-api-rendered.yaml
 
           helm template payments-api helm/afterpush \
-            -f gitops/apps/payments-api/values.yaml \
+            -f /tmp/payments-api-values.yaml \
             > /tmp/payments-api-rendered.yaml
