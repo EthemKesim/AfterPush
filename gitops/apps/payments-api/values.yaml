@@ -1,0 +1,43 @@
+application:
+  name: payments-api
+image:
+  repository: payments-api
+  tag: latest
+  pullPolicy: Never
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+config:
+  appEnv: local
+  logLevel: debug
+ingress:
+  enabled: true
+  className: nginx
+  host: payments.local
+  path: /
+  pathType: Prefix
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 50
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+probes:
+  readiness:
+    path: /health
+    initialDelaySeconds: 2
+    periodSeconds: 5
+  liveness:
+    path: /health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+monitoring:
+  enabled: true
+
