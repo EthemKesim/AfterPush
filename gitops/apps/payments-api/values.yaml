@@ -40,4 +40,3 @@ probes:
     periodSeconds: 10
 monitoring:
   enabled: true
-
