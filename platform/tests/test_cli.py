@@ -76,7 +76,7 @@ def test_render_command_generates_values_for_valid_config(capsys):
 
     assert exit_code == 0
     assert "application:" in captured.out
-    assert "name: demo-api" in captured.out
+    assert "name: afterpush-api" in captured.out
     assert "targetPort: 3000" in captured.out
 
 

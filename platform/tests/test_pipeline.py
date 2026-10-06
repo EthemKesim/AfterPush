@@ -24,7 +24,7 @@ def test_pipeline_generates_values_for_valid_config():
         config_path=EXAMPLE_PATH,
 )
 
-    assert values["application"]["name"] == "demo-api"
+    assert values["application"]["name"] == "afterpush-api"
     assert values["service"]["targetPort"] == 3000
     assert values["probes"]["readiness"]["path"] == "/health"
 

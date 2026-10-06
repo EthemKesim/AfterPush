@@ -2,7 +2,7 @@ apiVersion: afterpush.dev/v1
 kind: Application
 
 metadata:
-  name: demo-api
+  name: afterpush-api
 
 spec:
   image:
