@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+metadata:
+  name: afterpush-apps
+  namespace: argocd
+
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
+  generators:
+    - git:
+        repoURL: https://github.com/EthemKesim/AfterPush.git
+        revision: main
+        directories:
+          - path: gitops/apps/*
+
+  template:
+    metadata:
+      name: '{{.path.basename}}'
+
+    spec:
+      project: default
+
+      sources:
+        - repoURL: https://github.com/EthemKesim/AfterPush.git
+          targetRevision: main
+          path: helm/afterpush
+          helm:
+            valueFiles:
+              - '$values/gitops/apps/{{.path.basename}}/values.yaml'
+
+        - repoURL: https://github.com/EthemKesim/AfterPush.git
+          targetRevision: main
+          ref: values
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: afterpush-dev
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

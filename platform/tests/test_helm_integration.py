@@ -63,8 +63,8 @@ def render_chart() -> str:
 def test_helm_chart_uses_application_identity():
     rendered = render_chart()
 
-    assert "name: demo-api" in rendered
-    assert "app: demo-api" in rendered
+    assert "name: afterpush-api" in rendered
+    assert "app: afterpush-api" in rendered
 
 
 def test_deployment_uses_application_port():
@@ -73,15 +73,14 @@ def test_deployment_uses_application_port():
     assert "containerPort: 3000" in rendered
 
 
-def test_helm_chart_does_not_use_old_application_identity():
+def test_helm_chart_preserves_afterpush_application_identity():
     rendered = render_chart()
 
-    # The Docker image repository may legitimately still be
-    # named afterpush-api. We only reject the old Kubernetes
-    # resource identity patterns.
-    assert "name: afterpush-api\n" not in rendered
-    assert "app: afterpush-api" not in rendered
-    assert 'job="afterpush-api"' not in rendered
+    # The deployable AfterPush application intentionally keeps
+    # its existing Kubernetes identity during the GitOps handoff.
+    assert "name: afterpush-api\n" in rendered
+    assert "app: afterpush-api" in rendered
+    assert 'job="afterpush-api"' in rendered
 
 def test_helm_templates_do_not_hardcode_environment_namespace():
     templates_path = CHART_PATH / "templates"

@@ -143,20 +143,32 @@ jobs:
         with:
           version: "v4.3.0"
 
-      - name: Validate example application config
-        run: afterpush validate platform/examples/afterpush.yaml
+      - name: Validate application configs
+        run: |
+          afterpush validate platform/examples/afterpush.yaml
+          afterpush validate platform/examples/payments-api.yaml
 
       - name: Run platform tests
         run: python -m pytest platform/tests -v
 
-      - name: Lint Helm chart
-        run: helm lint helm/afterpush
-
-      - name: Render Helm chart
+      - name: Verify generated GitOps values
         run: |
-          afterpush render platform/examples/afterpush.yaml \
-            > /tmp/afterpush-values.yaml
+          afterpush render platform/examples/afterpush.yaml > /tmp/afterpush-api-values.yaml
+          afterpush render platform/examples/payments-api.yaml > /tmp/payments-api-values.yaml
 
-          helm template demo-api helm/afterpush \
-            -f /tmp/afterpush-values.yaml \
-            > /tmp/afterpush-rendered.yaml
+          diff -u gitops/apps/afterpush-api/values.yaml /tmp/afterpush-api-values.yaml
+
+      - name: Lint Helm applications
+        run: |
+          helm lint helm/afterpush -f gitops/apps/afterpush-api/values.yaml
+          helm lint helm/afterpush -f /tmp/payments-api-values.yaml
+
+      - name: Render Helm applications
+        run: |
+          helm template afterpush-api helm/afterpush \
+            -f gitops/apps/afterpush-api/values.yaml \
+            > /tmp/afterpush-api-rendered.yaml
+
+          helm template payments-api helm/afterpush \
+            -f /tmp/payments-api-values.yaml \
+            > /tmp/payments-api-rendered.yaml

@@ -79,9 +79,9 @@ def validate_command(config_path: Path) -> int:
 
 def render_command(config_path: Path) -> int:
     try:
-       values = build_helm_values(
+        values = build_helm_values(
             config_path=config_path,
-)
+        )
     except FileNotFoundError as error:
         print(f"✗ File not found: {error.filename}", file=sys.stderr)
         return 1
@@ -99,7 +99,7 @@ def render_command(config_path: Path) -> int:
 
         return 1
 
-    print(
+    sys.stdout.write(
         yaml.safe_dump(
             values,
             sort_keys=False,
