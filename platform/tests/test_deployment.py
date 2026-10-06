@@ -2,7 +2,10 @@ from pathlib import Path
 
 import yaml
 
-from afterpush_engine.deployment import prepare_deployment
+from afterpush_engine.deployment import (
+    find_gitops_root,
+    prepare_deployment,
+)
 
 
 def test_prepare_deployment_creates_gitops_values(tmp_path: Path):
@@ -63,3 +66,15 @@ def test_prepare_deployment_refuses_to_overwrite_existing_values(
         )
 
     assert values_path.read_text(encoding="utf-8") == "existing: true\n"
+
+def test_find_gitops_root_from_nested_directory(tmp_path: Path):
+    repository_root = tmp_path / "AfterPush"
+    gitops_root = repository_root / "gitops" / "apps"
+    nested_directory = repository_root / "platform" / "somewhere"
+
+    gitops_root.mkdir(parents=True)
+    nested_directory.mkdir(parents=True)
+
+    result = find_gitops_root(nested_directory)
+
+    assert result == gitops_root

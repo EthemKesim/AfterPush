@@ -5,6 +5,21 @@ import yaml
 from afterpush_engine.pipeline import build_helm_values
 
 
+def find_gitops_root(start_path: Path) -> Path:
+    current_path = start_path.resolve()
+
+    for directory in (current_path, *current_path.parents):
+        gitops_root = directory / "gitops" / "apps"
+
+        if gitops_root.is_dir():
+            return gitops_root
+
+    raise FileNotFoundError(
+        "Could not find gitops/apps from the current directory "
+        "or any parent directory."
+    )
+
+
 def prepare_deployment(
     config_path: Path,
     gitops_root: Path,

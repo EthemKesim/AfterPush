@@ -5,7 +5,10 @@ from pathlib import Path
 
 import yaml
 
-from afterpush_engine.deployment import prepare_deployment
+from afterpush_engine.deployment import (
+    find_gitops_root,
+    prepare_deployment,
+)
 
 from afterpush_engine.pipeline import (
     ConfigurationValidationError,
@@ -57,11 +60,15 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Path to the afterpush.yaml configuration file.",
     )
+
     deploy_parser.add_argument(
         "--gitops-root",
         type=Path,
-        default=Path("gitops/apps"),
-        help="GitOps applications directory.",
+        default=None,
+        help=(
+            "GitOps applications directory. "
+            "Automatically discovered when omitted."
+        ),
     )
 
     return parser
@@ -124,16 +131,23 @@ def render_command(config_path: Path) -> int:
             sort_keys=False,
         )
     )
+
     return 0
 
 def deploy_command(
     config_path: Path,
-    gitops_root: Path,
+    gitops_root: Path | None,
 ) -> int:
     try:
+        resolved_gitops_root = (
+            gitops_root
+            if gitops_root is not None
+            else find_gitops_root(Path.cwd())
+        )
+
         values_path = prepare_deployment(
             config_path=config_path,
-            gitops_root=gitops_root,
+            gitops_root=resolved_gitops_root,
         )
 
     except FileExistsError as error:
@@ -157,6 +171,8 @@ def deploy_command(
         return 1
 
     print(f"✓ GitOps deployment prepared: {values_path}")
+
+
     return 0
 
 

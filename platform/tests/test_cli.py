@@ -142,3 +142,33 @@ def test_deploy_command_refuses_existing_deployment(
     assert exit_code == 1
     assert "GitOps deployment already exists" in captured.err
     assert values_path.read_text(encoding="utf-8") == "existing: true\n"
+
+def test_deploy_command_discovers_gitops_root(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+):
+    repository_root = tmp_path / "AfterPush"
+    gitops_root = repository_root / "gitops" / "apps"
+    working_directory = repository_root / "platform"
+
+    gitops_root.mkdir(parents=True)
+    working_directory.mkdir(parents=True)
+
+    monkeypatch.chdir(working_directory)
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=None,
+    )
+
+    assert exit_code == 0
+
+    values_path = gitops_root / "afterpush-api" / "values.yaml"
+
+    assert values_path.exists()
+
+    captured = capsys.readouterr()
+
+    assert "GitOps deployment prepared" in captured.out
+    assert str(values_path) in captured.out
