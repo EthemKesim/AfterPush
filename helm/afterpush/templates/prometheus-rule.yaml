@@ -3,20 +3,21 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 
 metadata:
-  name: afterpush-alerts
+  name: {{ .Values.application.name }}-alerts
   labels:
     release: monitoring
 
 spec:
   groups:
     # Normal operational alerts
-    - name: afterpush.rules
+    - name: {{ .Values.application.name }}.rules
       rules:
         - alert: AfterPushTargetDown
           expr: up{namespace="{{ .Values.environment.namespace }}", job="{{ .Values.application.name }}"} == 0
           for: 2m
           labels:
             severity: critical
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush target is down"
             description: "Prometheus has been unable to scrape an AfterPush target for more than 2 minutes."
@@ -24,28 +25,40 @@ spec:
         - alert: AfterPushHighErrorRate
           expr: |
             (
-              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[5m]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                status_code=~"5..",
+                route!="/health"
+              }[5m]))
               /
-              sum(rate(afterpush_http_requests_total{route!="/health"}[5m]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                route!="/health"
+              }[5m]))
             ) > 0.05
           for: 5m
           labels:
             severity: warning
+            application: {{ .Values.application.name | quote }}
           annotations:
-            summary: "AfterPush has a high HTTP 5xx error rate"
-            description: "More than 5% of AfterPush user requests have returned HTTP 5xx responses for at least 5 minutes."
+            summary: "AfterPush HTTP 5xx error rate is high"
+            description: "AfterPush HTTP 5xx error rate has been above 5% for at least 5 minutes."
 
         - alert: AfterPushHighP95Latency
           expr: |
             histogram_quantile(
               0.95,
               sum by (le) (
-                rate(afterpush_http_request_duration_seconds_bucket{route!="/health"}[5m])
+                rate(afterpush_http_request_duration_seconds_bucket{
+                  application="{{ .Values.application.name }}",
+                  route!="/health"
+                }[5m])
               )
             ) > 0.5
           for: 5m
           labels:
             severity: warning
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush p95 latency is high"
             description: "AfterPush p95 request latency has been above 500 ms for at least 5 minutes."
@@ -64,56 +77,94 @@ spec:
           for: 1m
           labels:
             severity: warning
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush deployment has unavailable replicas"
             description: "The AfterPush Deployment has had fewer available replicas than desired for more than 1 minute."
 
     # SLO recording rules and SLO-aware alerts
-    - name: afterpush.slo
+    - name: {{ .Values.application.name }}.slo
       rules:
         # ------------------------------------------------
         # ERROR RATE RECORDING RULES
         # ------------------------------------------------
 
         # Short window: last 5 minutes
+                # Short window: last 5 minutes
         - record: afterpush:slo_error_rate:5m
+          labels:
+            application: {{ .Values.application.name | quote }}
           expr: |
             (
-              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[5m]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                status_code=~"5..",
+                route!="/health"
+              }[5m]))
               or vector(0)
             )
             /
-            sum(rate(afterpush_http_requests_total{route!="/health"}[5m]))
+            sum(rate(afterpush_http_requests_total{
+              application="{{ .Values.application.name }}",
+              route!="/health"
+            }[5m]))
 
         # Long window for fast-burn detection: last 1 hour
         - record: afterpush:slo_error_rate:1h
+          labels:
+            application: {{ .Values.application.name | quote }}
           expr: |
             (
-              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[1h]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                status_code=~"5..",
+                route!="/health"
+              }[1h]))
               or vector(0)
             )
             /
-            sum(rate(afterpush_http_requests_total{route!="/health"}[1h]))
+            sum(rate(afterpush_http_requests_total{
+              application="{{ .Values.application.name }}",
+              route!="/health"
+            }[1h]))
 
         # Short window for slow-burn detection: last 30 minutes
         - record: afterpush:slo_error_rate:30m
+          labels:
+            application: {{ .Values.application.name | quote }}
           expr: |
             (
-              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[30m]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                status_code=~"5..",
+                route!="/health"
+              }[30m]))
               or vector(0)
             )
             /
-            sum(rate(afterpush_http_requests_total{route!="/health"}[30m]))
+            sum(rate(afterpush_http_requests_total{
+              application="{{ .Values.application.name }}",
+              route!="/health"
+            }[30m]))
 
         # Long window for slow-burn detection: last 6 hours
         - record: afterpush:slo_error_rate:6h
+          labels:
+            application: {{ .Values.application.name | quote }}
           expr: |
             (
-              sum(rate(afterpush_http_requests_total{status_code=~"5..",route!="/health"}[6h]))
+              sum(rate(afterpush_http_requests_total{
+                application="{{ .Values.application.name }}",
+                status_code=~"5..",
+                route!="/health"
+              }[6h]))
               or vector(0)
             )
             /
-            sum(rate(afterpush_http_requests_total{route!="/health"}[6h]))
+            sum(rate(afterpush_http_requests_total{
+              application="{{ .Values.application.name }}",
+              route!="/health"
+            }[6h]))
 
         # ------------------------------------------------
         # BURN RATE RECORDING RULES
@@ -126,16 +177,36 @@ spec:
         #
 
         - record: afterpush:slo_burn_rate:5m
-          expr: afterpush:slo_error_rate:5m / 0.001
+          labels:
+            application: {{ .Values.application.name | quote }}
+          expr: |
+            afterpush:slo_error_rate:5m{
+              application="{{ .Values.application.name }}"
+            } / 0.001
 
         - record: afterpush:slo_burn_rate:1h
-          expr: afterpush:slo_error_rate:1h / 0.001
+          labels:
+            application: {{ .Values.application.name | quote }}
+          expr: |
+            afterpush:slo_error_rate:1h{
+              application="{{ .Values.application.name }}"
+            } / 0.001
 
         - record: afterpush:slo_burn_rate:30m
-          expr: afterpush:slo_error_rate:30m / 0.001
+          labels:
+            application: {{ .Values.application.name | quote }}
+          expr: |
+            afterpush:slo_error_rate:30m{
+              application="{{ .Values.application.name }}"
+            } / 0.001
 
         - record: afterpush:slo_burn_rate:6h
-          expr: afterpush:slo_error_rate:6h / 0.001
+          labels:
+            application: {{ .Values.application.name | quote }}
+          expr: |
+            afterpush:slo_error_rate:6h{
+              application="{{ .Values.application.name }}"
+            } / 0.001
 
         # ------------------------------------------------
         # FAST ERROR-BUDGET BURN
@@ -151,12 +222,17 @@ spec:
 
         - alert: AfterPushSLOBudgetBurnFast
           expr: |
-            afterpush:slo_burn_rate:5m > 14.4
+            afterpush:slo_burn_rate:5m{
+              application="{{ .Values.application.name }}"
+            } > 14.4
             and
-            afterpush:slo_burn_rate:1h > 14.4
+            afterpush:slo_burn_rate:1h{
+              application="{{ .Values.application.name }}"
+            } > 14.4
           for: 2m
           labels:
             severity: critical
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush is burning its error budget too quickly"
             description: "AfterPush is consuming the 99.9% availability SLO error budget at more than 14.4x the expected rate."
@@ -174,12 +250,17 @@ spec:
 
         - alert: AfterPushSLOBudgetBurnSlow
           expr: |
-            afterpush:slo_burn_rate:30m > 6
+            afterpush:slo_burn_rate:30m{
+              application="{{ .Values.application.name }}"
+            } > 6
             and
-            afterpush:slo_burn_rate:6h > 6
+            afterpush:slo_burn_rate:6h{
+              application="{{ .Values.application.name }}"
+            } > 6
           for: 15m
           labels:
             severity: warning
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush is steadily consuming its error budget"
             description: "AfterPush is consuming the 99.9% availability SLO error budget at more than 6x the expected rate over longer time windows."
@@ -201,11 +282,12 @@ spec:
           expr: |
             probe_success{
               namespace="{{ .Values.environment.namespace }}",
-              job="afterpush-blackbox"
+              job="{{ .Values.application.name }}-blackbox"
             } == 0
           for: 1m
           labels:
             severity: critical
+            application: {{ .Values.application.name | quote }}
           annotations:
             summary: "AfterPush is unreachable from the blackbox probe"
             description: "The external availability probe has failed continuously for more than 1 minute."

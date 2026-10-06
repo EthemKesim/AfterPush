@@ -9,5 +9,3 @@ config:
           - HTTP/2.0
         follow_redirects: true
         preferred_ip_protocol: ip4
-        headers:
-          Host: afterpush.local

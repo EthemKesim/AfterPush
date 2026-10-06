@@ -16,4 +16,8 @@ spec:
     - port: http
       path: /metrics
       interval: 15s
+
+      relabelings:
+        - targetLabel: application
+          replacement: {{ .Values.application.name | quote }}
 {{- end }}
