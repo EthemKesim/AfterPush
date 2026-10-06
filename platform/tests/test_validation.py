@@ -113,3 +113,18 @@ def test_ingress_requires_host_when_enabled():
     assert (
         "spec.ingress.host is required when ingress is enabled."
     ) in errors
+
+
+def test_application_name_rejects_path_traversal():
+    config = load_yaml(EXAMPLE_PATH)
+    schema = load_schema()
+
+    config["metadata"]["name"] = "../../outside"
+
+    errors = validate_config(config, schema)
+
+    assert errors
+    assert any(
+        "metadata.name" in error
+        for error in errors
+    )
