@@ -4,6 +4,8 @@ import yaml
 
 from afterpush_engine.pipeline import build_helm_values
 
+class GitOpsRootNotFoundError(Exception):
+    """Raised when the GitOps applications directory cannot be discovered."""
 
 def find_gitops_root(start_path: Path) -> Path:
     current_path = start_path.resolve()
@@ -14,10 +16,10 @@ def find_gitops_root(start_path: Path) -> Path:
         if gitops_root.is_dir():
             return gitops_root
 
-    raise FileNotFoundError(
-        "Could not find gitops/apps from the current directory "
-        "or any parent directory."
-    )
+    raise GitOpsRootNotFoundError(
+    "Could not find gitops/apps from the current directory "
+    "or any parent directory."
+)
 
 
 def prepare_deployment(

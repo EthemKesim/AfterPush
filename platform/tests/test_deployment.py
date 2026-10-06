@@ -2,7 +2,10 @@ from pathlib import Path
 
 import yaml
 
+import pytest
+
 from afterpush_engine.deployment import (
+    GitOpsRootNotFoundError,
     find_gitops_root,
     prepare_deployment,
 )
@@ -78,3 +81,12 @@ def test_find_gitops_root_from_nested_directory(tmp_path: Path):
     result = find_gitops_root(nested_directory)
 
     assert result == gitops_root
+
+def test_find_gitops_root_raises_clear_error_when_missing(
+    tmp_path: Path,
+):
+ with pytest.raises(
+    GitOpsRootNotFoundError,
+    match="Could not find gitops/apps",
+):
+        find_gitops_root(tmp_path)

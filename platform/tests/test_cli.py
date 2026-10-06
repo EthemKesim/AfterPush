@@ -172,3 +172,23 @@ def test_deploy_command_discovers_gitops_root(
 
     assert "GitOps deployment prepared" in captured.out
     assert str(values_path) in captured.out
+
+
+def test_deploy_command_reports_missing_gitops_root(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+):
+    monkeypatch.chdir(tmp_path)
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=None,
+    )
+
+    assert exit_code == 1
+
+    captured = capsys.readouterr()
+
+    assert "Could not find gitops/apps" in captured.err
+    assert "None" not in captured.err

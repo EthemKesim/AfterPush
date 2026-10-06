@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 
 from afterpush_engine.deployment import (
+    GitOpsRootNotFoundError,
     find_gitops_root,
     prepare_deployment,
 )
@@ -151,6 +152,9 @@ def deploy_command(
         )
 
     except FileExistsError as error:
+        print(f"✗ {error}", file=sys.stderr)
+        return 1
+    except GitOpsRootNotFoundError as error:
         print(f"✗ {error}", file=sys.stderr)
         return 1
     except FileNotFoundError as error:
