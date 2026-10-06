@@ -72,6 +72,12 @@ def create_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    deploy_parser.add_argument(
+        "--update",
+        action="store_true",
+        help="Update an existing GitOps deployment.",
+    )
+
     return parser
 
 
@@ -138,6 +144,7 @@ def render_command(config_path: Path) -> int:
 def deploy_command(
     config_path: Path,
     gitops_root: Path | None,
+    allow_update: bool = False,
 ) -> int:
     try:
         resolved_gitops_root = (
@@ -149,6 +156,7 @@ def deploy_command(
         values_path = prepare_deployment(
             config_path=config_path,
             gitops_root=resolved_gitops_root,
+            allow_update=allow_update,
         )
 
     except FileExistsError as error:
@@ -175,11 +183,7 @@ def deploy_command(
         return 1
 
     print(f"✓ GitOps deployment prepared: {values_path}")
-
-
     return 0
-
-
 
 
 def main() -> int:
@@ -196,6 +200,7 @@ def main() -> int:
         return deploy_command(
             args.config,
             args.gitops_root,
+            allow_update=args.update,
         )
 
     parser.error(f"Unknown command: {args.command}")

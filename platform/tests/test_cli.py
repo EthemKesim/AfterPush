@@ -10,7 +10,8 @@ PLATFORM_ROOT = PROJECT_ROOT / "platform"
 if str(PLATFORM_ROOT) not in sys.path:
     sys.path.insert(0, str(PLATFORM_ROOT))
 
-from afterpush_cli.main import (  # noqa: E402
+from afterpush_cli.main import (
+    create_parser,  # noqa: E402
     deploy_command,
     render_command,
     validate_command,
@@ -192,3 +193,56 @@ def test_deploy_command_reports_missing_gitops_root(
 
     assert "Could not find gitops/apps" in captured.err
     assert "None" not in captured.err
+
+
+def test_deploy_command_updates_existing_deployment(
+    tmp_path: Path,
+    capsys,
+):
+    gitops_root = tmp_path / "gitops" / "apps"
+    values_path = (
+        gitops_root
+        / "afterpush-api"
+        / "values.yaml"
+    )
+
+    values_path.parent.mkdir(parents=True)
+
+    values_path.write_text(
+        "old: value\n",
+        encoding="utf-8",
+    )
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=gitops_root,
+        allow_update=True,
+    )
+
+    assert exit_code == 0
+
+    values = yaml.safe_load(
+        values_path.read_text(encoding="utf-8")
+    )
+
+    assert values["application"]["name"] == "afterpush-api"
+    assert "old" not in values
+
+    captured = capsys.readouterr()
+
+    assert "GitOps deployment prepared" in captured.out
+
+
+def test_parser_accepts_deploy_update_flag():
+    parser = create_parser()
+
+    args = parser.parse_args(
+        [
+            "deploy",
+            "examples/afterpush.yaml",
+            "--update",
+        ]
+    )
+
+    assert args.command == "deploy"
+    assert args.update is True

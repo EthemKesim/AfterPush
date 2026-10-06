@@ -25,6 +25,7 @@ def find_gitops_root(start_path: Path) -> Path:
 def prepare_deployment(
     config_path: Path,
     gitops_root: Path,
+    allow_update: bool = False,
 ) -> Path:
     values = build_helm_values(config_path)
 
@@ -38,7 +39,7 @@ def prepare_deployment(
 
     values_path = application_directory / "values.yaml"
 
-    if values_path.exists():
+    if values_path.exists() and not allow_update:
         raise FileExistsError(
             f"GitOps deployment already exists: {values_path}"
         )
