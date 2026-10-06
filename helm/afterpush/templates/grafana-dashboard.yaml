@@ -3,12 +3,12 @@ apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: afterpush-grafana-dashboard
+  name: {{ .Values.application.name }}-grafana-dashboard
   labels:
     grafana_dashboard: "1"
 
 data:
-  afterpush-dashboard.json: |
+  {{ .Values.application.name }}-dashboard.json: |
     {
       "annotations": {
         "list": []
@@ -59,7 +59,7 @@ data:
           },
           "targets": [
             {
-              "expr": "100 * ((sum(rate(afterpush_http_requests_total{status_code=~\"5..\",route!=\"/health\"}[5m])) or vector(0)) / sum(rate(afterpush_http_requests_total{route!=\"/health\"}[5m])))",
+              "expr": "100 * ((sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",status_code=~\"5..\",route!=\"/health\"}[5m])) or vector(0)) / sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m])))",
               "refId": "A"
             }
           ],
@@ -90,7 +90,7 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum by (le) (rate(afterpush_http_request_duration_seconds_bucket{route!=\"/health\"}[5m])))",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(afterpush_http_request_duration_seconds_bucket{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m])))",
               "refId": "A"
             }
           ],
@@ -121,7 +121,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(afterpush_http_requests_total{route!=\"/health\"}[5m]))",
+              "expr": "sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m]))",
               "legendFormat": "AfterPush RPS",
               "refId": "A"
             }
@@ -155,7 +155,7 @@ data:
           },
           "targets": [
             {
-              "expr": "100 * (1 - afterpush:slo_error_rate:5m)",
+              "expr": "100 * (1 - afterpush:slo_error_rate:5m{application=\"{{ .Values.application.name }}\"})",
               "refId": "A"
             }
           ],
@@ -203,12 +203,12 @@ data:
           },
           "targets": [
             {
-              "expr": "afterpush:slo_burn_rate:5m",
+              "expr": "afterpush:slo_burn_rate:5m{application=\"{{ .Values.application.name }}\"}",
               "legendFormat": "5m burn rate",
               "refId": "A"
             },
             {
-              "expr": "afterpush:slo_burn_rate:1h",
+              "expr": "afterpush:slo_burn_rate:1h{application=\"{{ .Values.application.name }}\"}",
               "legendFormat": "1h burn rate",
               "refId": "B"
             }
@@ -244,12 +244,12 @@ data:
           },
           "targets": [
             {
-              "expr": "afterpush:slo_burn_rate:30m",
+              "expr": "afterpush:slo_burn_rate:30m{application=\"{{ .Values.application.name }}\"}",
               "legendFormat": "30m burn rate",
               "refId": "A"
             },
             {
-              "expr": "afterpush:slo_burn_rate:6h",
+              "expr": "afterpush:slo_burn_rate:6h{application=\"{{ .Values.application.name }}\"}",
               "legendFormat": "6h burn rate",
               "refId": "B"
             }
@@ -285,8 +285,8 @@ data:
           },
           "targets": [
             {
-              "expr": "probe_success{namespace=\"{{ .Values.environment.namespace }}\",job=\"afterpush-blackbox\"}",
-              "legendFormat": "AfterPush availability",
+              "expr": "probe_success{namespace=\"{{ .Values.environment.namespace }}\",job=\"{{ .Values.application.name }}-blackbox\",application=\"{{ .Values.application.name }}\"}",
+              "legendFormat": "{{ .Values.application.name }} availability",
               "refId": "A"
             }
           ],
@@ -356,8 +356,8 @@ data:
         "to": "now"
       },
       "timezone": "browser",
-      "title": "AfterPush Observability",
-      "uid": "afterpush-observability",
+      "title": "AfterPush - {{ .Values.application.name }} Observability",
+      "uid": "afterpush-{{ .Values.application.name }}",
       "version": 4
     }
 {{- end }}

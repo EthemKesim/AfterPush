@@ -3,12 +3,13 @@ apiVersion: monitoring.coreos.com/v1
 kind: Probe
 
 metadata:
-  name: afterpush-http
+  name: {{ .Values.application.name }}-http
   labels:
     release: monitoring
+    application: {{ .Values.application.name | quote }}
 
 spec:
-  jobName: afterpush-blackbox
+  jobName: {{ printf "%s-blackbox" .Values.application.name | quote }}
 
   interval: 15s
 
@@ -20,5 +21,7 @@ spec:
   targets:
     staticConfig:
       static:
-        - http://ingress-nginx-controller.ingress-nginx.svc.cluster.local/health
+        - {{ printf "http://%s%s" .Values.ingress.host .Values.probes.readiness.path | quote }}
+      labels:
+        application: {{ .Values.application.name | quote }}
 {{- end }}
