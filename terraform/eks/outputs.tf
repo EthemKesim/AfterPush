@@ -35,3 +35,13 @@ output "ecr_repository_url" {
   description = "ECR repository URL for the AfterPush API."
   value       = aws_ecr_repository.api.repository_url
 }
+
+output "eks_oidc_provider_arn" {
+  description = "IAM OIDC provider ARN used by EKS IRSA."
+  value       = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "aws_load_balancer_controller_role_arn" {
+  description = "IAM role ARN used by the AWS Load Balancer Controller through IRSA."
+  value       = aws_iam_role.aws_load_balancer_controller.arn
+}

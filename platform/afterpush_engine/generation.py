@@ -13,12 +13,18 @@ def generate_helm_values(config: dict) -> dict:
             "appEnv": "local",
             "logLevel": "debug",
             "ingressClassName": "nginx",
+            "ingressAnnotations": {},
         },
         "eks": {
             "pullPolicy": "IfNotPresent",
             "appEnv": "eks",
             "logLevel": "info",
             "ingressClassName": "alb",
+            "ingressAnnotations": {
+                "alb.ingress.kubernetes.io/scheme": "internet-facing",
+                "alb.ingress.kubernetes.io/target-type": "ip",
+                "alb.ingress.kubernetes.io/healthcheck-path": spec["health"]["path"],
+            },
         },
     }
 
@@ -49,6 +55,7 @@ def generate_helm_values(config: dict) -> dict:
         "ingress": {
             "enabled": ingress.get("enabled", False),
             "className": platform_defaults["ingressClassName"],
+            "annotations": platform_defaults["ingressAnnotations"],
             "host": ingress.get("host", ""),
             "path": "/",
             "pathType": "Prefix",

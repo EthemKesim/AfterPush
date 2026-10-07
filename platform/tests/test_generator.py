@@ -99,8 +99,13 @@ def test_generator_applies_eks_platform_defaults():
     assert values["image"]["pullPolicy"] == "IfNotPresent"
     assert values["config"]["appEnv"] == "eks"
     assert values["config"]["logLevel"] == "info"
-    assert values["ingress"]["className"] == "alb"
 
+    assert values["ingress"]["className"] == "alb"
+    assert values["ingress"]["annotations"] == {
+        "alb.ingress.kubernetes.io/scheme": "internet-facing",
+        "alb.ingress.kubernetes.io/target-type": "ip",
+        "alb.ingress.kubernetes.io/healthcheck-path": "/health",
+    }
 
 def test_generator_defaults_to_local_profile():
     config = get_config()
@@ -124,3 +129,5 @@ def test_generator_maps_application_name():
     values = generate_helm_values(get_config())
 
     assert values["application"]["name"] == "demo-api"
+
+
