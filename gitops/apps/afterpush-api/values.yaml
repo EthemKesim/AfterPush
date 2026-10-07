@@ -1,33 +1,27 @@
 application:
   name: afterpush-api
-
 image:
   repository: 833090513321.dkr.ecr.eu-central-1.amazonaws.com/afterpush-api
   tag: cb861fe5538164d73e358b26722adc66384f899e
   pullPolicy: IfNotPresent
-
 service:
   type: ClusterIP
   port: 80
   targetPort: 3000
-
 config:
   appEnv: eks
   logLevel: info
-
 ingress:
   enabled: false
-  className: ""
-  host: ""
+  className: alb
+  host: afterpush.local
   path: /
   pathType: Prefix
-
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 50
-
 resources:
   requests:
     cpu: 100m
@@ -35,7 +29,6 @@ resources:
   limits:
     cpu: 500m
     memory: 256Mi
-
 probes:
   readiness:
     path: /health
@@ -45,6 +38,5 @@ probes:
     path: /health
     initialDelaySeconds: 5
     periodSeconds: 10
-
 monitoring:
   enabled: false

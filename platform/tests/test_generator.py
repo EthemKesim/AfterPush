@@ -11,7 +11,7 @@ if str(PLATFORM_ROOT) not in sys.path:
 from afterpush_engine.generation import generate_helm_values  # noqa: E402
 
 
-def get_config():
+def get_config(profile="local"):
     return {
         "apiVersion": "afterpush.dev/v1",
         "kind": "Application",
@@ -19,6 +19,7 @@ def get_config():
             "name": "demo-api",
         },
         "spec": {
+            "profile": profile,
             "image": {
                 "repository": "afterpush-api",
                 "tag": "metrics",
@@ -80,6 +81,9 @@ def test_generator_applies_platform_defaults():
     values = generate_helm_values(get_config())
 
     assert values["service"]["type"] == "ClusterIP"
+    assert values["image"]["pullPolicy"] == "Never"
+    assert values["config"]["appEnv"] == "local"
+    assert values["config"]["logLevel"] == "debug"
     assert values["ingress"]["className"] == "nginx"
 
     assert values["resources"]["requests"]["cpu"] == "100m"
@@ -87,6 +91,27 @@ def test_generator_applies_platform_defaults():
 
     assert values["resources"]["limits"]["cpu"] == "500m"
     assert values["resources"]["limits"]["memory"] == "256Mi"
+
+
+def test_generator_applies_eks_platform_defaults():
+    values = generate_helm_values(get_config(profile="eks"))
+
+    assert values["image"]["pullPolicy"] == "IfNotPresent"
+    assert values["config"]["appEnv"] == "eks"
+    assert values["config"]["logLevel"] == "info"
+    assert values["ingress"]["className"] == "alb"
+
+
+def test_generator_defaults_to_local_profile():
+    config = get_config()
+    del config["spec"]["profile"]
+
+    values = generate_helm_values(config)
+
+    assert values["image"]["pullPolicy"] == "Never"
+    assert values["config"]["appEnv"] == "local"
+    assert values["config"]["logLevel"] == "debug"
+    assert values["ingress"]["className"] == "nginx"
 
 
 def test_generator_maps_monitoring():

@@ -1,9 +1,28 @@
 def generate_helm_values(config: dict) -> dict:
     spec = config["spec"]
 
+    profile = spec.get("profile", "local")
+
     ingress = spec.get("ingress", {"enabled": False})
     scaling = spec.get("scaling", {"enabled": False})
     monitoring = spec.get("monitoring", {"enabled": False})
+
+    profiles = {
+        "local": {
+            "pullPolicy": "Never",
+            "appEnv": "local",
+            "logLevel": "debug",
+            "ingressClassName": "nginx",
+        },
+        "eks": {
+            "pullPolicy": "IfNotPresent",
+            "appEnv": "eks",
+            "logLevel": "info",
+            "ingressClassName": "alb",
+        },
+    }
+
+    platform_defaults = profiles[profile]
 
     values = {
         "application": {
@@ -13,7 +32,7 @@ def generate_helm_values(config: dict) -> dict:
         "image": {
             "repository": spec["image"]["repository"],
             "tag": spec["image"]["tag"],
-            "pullPolicy": "Never",
+            "pullPolicy": platform_defaults["pullPolicy"],
         },
 
         "service": {
@@ -23,13 +42,13 @@ def generate_helm_values(config: dict) -> dict:
         },
 
         "config": {
-            "appEnv": "local",
-            "logLevel": "debug",
+            "appEnv": platform_defaults["appEnv"],
+            "logLevel": platform_defaults["logLevel"],
         },
 
         "ingress": {
             "enabled": ingress.get("enabled", False),
-            "className": "nginx",
+            "className": platform_defaults["ingressClassName"],
             "host": ingress.get("host", ""),
             "path": "/",
             "pathType": "Prefix",
