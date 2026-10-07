@@ -78,6 +78,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Update an existing GitOps deployment.",
     )
 
+    deploy_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview generated GitOps values without writing files.",
+    )
+
     return parser
 
 
@@ -145,8 +151,21 @@ def deploy_command(
     config_path: Path,
     gitops_root: Path | None,
     allow_update: bool = False,
+    dry_run: bool = False,
 ) -> int:
     try:
+        if dry_run:
+            values = build_helm_values(config_path)
+
+            print(
+                yaml.safe_dump(
+                    values,
+                    sort_keys=False,
+                ),
+                end="",
+            )
+
+            return 0
         resolved_gitops_root = (
             gitops_root
             if gitops_root is not None
@@ -201,6 +220,7 @@ def main() -> int:
             args.config,
             args.gitops_root,
             allow_update=args.update,
+            dry_run=args.dry_run,
         )
 
     parser.error(f"Unknown command: {args.command}")

@@ -246,3 +246,46 @@ def test_parser_accepts_deploy_update_flag():
 
     assert args.command == "deploy"
     assert args.update is True
+
+
+def test_deploy_command_dry_run_does_not_write_gitops_state(
+    tmp_path: Path,
+    capsys,
+):
+    gitops_root = tmp_path / "gitops" / "apps"
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=gitops_root,
+        dry_run=True,
+    )
+
+    assert exit_code == 0
+
+    values_path = (
+        gitops_root
+        / "afterpush-api"
+        / "values.yaml"
+    )
+
+    assert not values_path.exists()
+
+    captured = capsys.readouterr()
+
+    assert "afterpush-api" in captured.out
+    assert "repository: afterpush-api" in captured.out
+
+
+def test_parser_accepts_deploy_dry_run_flag():
+    parser = create_parser()
+
+    args = parser.parse_args(
+        [
+            "deploy",
+            "examples/afterpush.yaml",
+            "--dry-run",
+        ]
+    )
+
+    assert args.command == "deploy"
+    assert args.dry_run is True
