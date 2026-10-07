@@ -1,4 +1,5 @@
 import argparse
+import difflib
 import json
 import sys
 from pathlib import Path
@@ -10,7 +11,6 @@ from afterpush_engine.deployment import (
     find_gitops_root,
     prepare_deployment,
 )
-
 from afterpush_engine.pipeline import (
     ConfigurationValidationError,
     build_helm_values,
@@ -20,6 +20,7 @@ from afterpush_engine.validation import (
     load_yaml,
     validate_config,
 )
+
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -61,7 +62,6 @@ def create_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Path to the afterpush.yaml configuration file.",
     )
-
     deploy_parser.add_argument(
         "--gitops-root",
         type=Path,
@@ -71,17 +71,15 @@ def create_parser() -> argparse.ArgumentParser:
             "Automatically discovered when omitted."
         ),
     )
-
     deploy_parser.add_argument(
         "--update",
         action="store_true",
         help="Update an existing GitOps deployment.",
     )
-
     deploy_parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Preview generated GitOps values without writing files.",
+        help="Preview GitOps changes without writing files.",
     )
 
     return parser
@@ -93,22 +91,42 @@ def validate_command(config_path: Path) -> int:
         schema = load_schema()
 
     except FileNotFoundError as error:
-        print(f"✗ File not found: {error.filename}", file=sys.stderr)
-        return 1
-    except yaml.YAMLError as error:
-        print(f"✗ Invalid YAML: {error}", file=sys.stderr)
-        return 1
-    except json.JSONDecodeError as error:
-        print(f"✗ Invalid schema JSON: {error}", file=sys.stderr)
+        print(
+            f"✗ File not found: {error.filename}",
+            file=sys.stderr,
+        )
         return 1
 
-    errors = validate_config(config, schema)
+    except yaml.YAMLError as error:
+        print(
+            f"✗ Invalid YAML: {error}",
+            file=sys.stderr,
+        )
+        return 1
+
+    except json.JSONDecodeError as error:
+        print(
+            f"✗ Invalid schema JSON: {error}",
+            file=sys.stderr,
+        )
+        return 1
+
+    errors = validate_config(
+        config,
+        schema,
+    )
 
     if errors:
-        print("✗ AfterPush configuration is invalid:\n", file=sys.stderr)
+        print(
+            "✗ AfterPush configuration is invalid:\n",
+            file=sys.stderr,
+        )
 
         for error in errors:
-            print(f"  - {error}", file=sys.stderr)
+            print(
+                f"  - {error}",
+                file=sys.stderr,
+            )
 
         return 1
 
@@ -121,20 +139,39 @@ def render_command(config_path: Path) -> int:
         values = build_helm_values(
             config_path=config_path,
         )
+
     except FileNotFoundError as error:
-        print(f"✗ File not found: {error.filename}", file=sys.stderr)
+        print(
+            f"✗ File not found: {error.filename}",
+            file=sys.stderr,
+        )
         return 1
+
     except yaml.YAMLError as error:
-        print(f"✗ Invalid YAML: {error}", file=sys.stderr)
+        print(
+            f"✗ Invalid YAML: {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except json.JSONDecodeError as error:
-        print(f"✗ Invalid schema JSON: {error}", file=sys.stderr)
+        print(
+            f"✗ Invalid schema JSON: {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except ConfigurationValidationError as error:
-        print("✗ AfterPush configuration is invalid:\n", file=sys.stderr)
+        print(
+            "✗ AfterPush configuration is invalid:\n",
+            file=sys.stderr,
+        )
 
         for validation_error in error.errors:
-            print(f"  - {validation_error}", file=sys.stderr)
+            print(
+                f"  - {validation_error}",
+                file=sys.stderr,
+            )
 
         return 1
 
@@ -147,6 +184,7 @@ def render_command(config_path: Path) -> int:
 
     return 0
 
+
 def deploy_command(
     config_path: Path,
     gitops_root: Path | None,
@@ -155,17 +193,57 @@ def deploy_command(
 ) -> int:
     try:
         if dry_run:
-            values = build_helm_values(config_path)
-
-            print(
-                yaml.safe_dump(
-                    values,
-                    sort_keys=False,
-                ),
-                end="",
+            values = build_helm_values(
+                config_path=config_path,
             )
 
+            desired = yaml.safe_dump(
+                values,
+                sort_keys=False,
+            )
+
+            application_name = values["application"]["name"]
+
+            resolved_gitops_root = (
+                gitops_root
+                if gitops_root is not None
+                else find_gitops_root(Path.cwd())
+            )
+
+            values_path = (
+                resolved_gitops_root
+                / application_name
+                / "values.yaml"
+            )
+
+            # New application:
+            # show the generated desired state without writing it.
+            if not values_path.exists():
+                print(desired, end="")
+                return 0
+
+            # Existing application:
+            # compare the current GitOps state with the desired state.
+            current = values_path.read_text(
+                encoding="utf-8",
+            )
+
+            diff = "".join(
+                difflib.unified_diff(
+                    current.splitlines(keepends=True),
+                    desired.splitlines(keepends=True),
+                    fromfile="current",
+                    tofile="desired",
+                )
+            )
+
+            if not diff:
+                print("No changes detected.")
+                return 0
+
+            print(diff, end="")
             return 0
+
         resolved_gitops_root = (
             gitops_root
             if gitops_root is not None
@@ -179,29 +257,57 @@ def deploy_command(
         )
 
     except FileExistsError as error:
-        print(f"✗ {error}", file=sys.stderr)
+        print(
+            f"✗ {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except GitOpsRootNotFoundError as error:
-        print(f"✗ {error}", file=sys.stderr)
+        print(
+            f"✗ {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except FileNotFoundError as error:
-        print(f"✗ File not found: {error.filename}", file=sys.stderr)
+        print(
+            f"✗ File not found: {error.filename}",
+            file=sys.stderr,
+        )
         return 1
+
     except yaml.YAMLError as error:
-        print(f"✗ Invalid YAML: {error}", file=sys.stderr)
+        print(
+            f"✗ Invalid YAML: {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except json.JSONDecodeError as error:
-        print(f"✗ Invalid schema JSON: {error}", file=sys.stderr)
+        print(
+            f"✗ Invalid schema JSON: {error}",
+            file=sys.stderr,
+        )
         return 1
+
     except ConfigurationValidationError as error:
-        print("✗ AfterPush configuration is invalid:\n", file=sys.stderr)
+        print(
+            "✗ AfterPush configuration is invalid:\n",
+            file=sys.stderr,
+        )
 
         for validation_error in error.errors:
-            print(f"  - {validation_error}", file=sys.stderr)
+            print(
+                f"  - {validation_error}",
+                file=sys.stderr,
+            )
 
         return 1
 
-    print(f"✓ GitOps deployment prepared: {values_path}")
+    print(
+        f"✓ GitOps deployment prepared: {values_path}"
+    )
     return 0
 
 
@@ -210,10 +316,14 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.command == "validate":
-        return validate_command(args.config)
+        return validate_command(
+            args.config,
+        )
 
     if args.command == "render":
-        return render_command(args.config)
+        return render_command(
+            args.config,
+        )
 
     if args.command == "deploy":
         return deploy_command(
@@ -223,7 +333,9 @@ def main() -> int:
             dry_run=args.dry_run,
         )
 
-    parser.error(f"Unknown command: {args.command}")
+    parser.error(
+        f"Unknown command: {args.command}"
+    )
     return 2
 
 

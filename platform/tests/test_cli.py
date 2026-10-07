@@ -3,6 +3,9 @@ from pathlib import Path
 
 import yaml
 
+from afterpush_engine.pipeline import build_helm_values
+
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLATFORM_ROOT = PROJECT_ROOT / "platform"
@@ -289,3 +292,82 @@ def test_parser_accepts_deploy_dry_run_flag():
 
     assert args.command == "deploy"
     assert args.dry_run is True
+
+
+def test_deploy_command_dry_run_shows_diff_for_existing_deployment(
+    tmp_path: Path,
+    capsys,
+):
+    gitops_root = tmp_path / "gitops" / "apps"
+
+    values_path = (
+        gitops_root
+        / "afterpush-api"
+        / "values.yaml"
+    )
+
+    values_path.parent.mkdir(parents=True)
+
+    values_path.write_text(
+        "application:\n"
+        "  name: afterpush-api\n"
+        "image:\n"
+        "  repository: old-api\n",
+        encoding="utf-8",
+    )
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=gitops_root,
+        dry_run=True,
+    )
+
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+
+    assert "--- current" in captured.out
+    assert "+++ desired" in captured.out
+    assert "-  repository: old-api" in captured.out
+    assert "+  repository: afterpush-api" in captured.out
+
+    assert "repository: old-api" in values_path.read_text(
+        encoding="utf-8"
+    )
+
+
+def test_deploy_command_dry_run_reports_no_changes(
+    tmp_path: Path,
+    capsys,
+):
+    gitops_root = tmp_path / "gitops" / "apps"
+
+    values_path = (
+        gitops_root
+        / "afterpush-api"
+        / "values.yaml"
+    )
+
+    values_path.parent.mkdir(parents=True)
+
+    values = build_helm_values(EXAMPLE_PATH)
+
+    values_path.write_text(
+        yaml.safe_dump(
+            values,
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = deploy_command(
+        config_path=EXAMPLE_PATH,
+        gitops_root=gitops_root,
+        dry_run=True,
+    )
+
+    assert exit_code == 0
+
+    captured = capsys.readouterr()
+
+    assert "No changes detected." in captured.out
