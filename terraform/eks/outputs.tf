@@ -30,3 +30,8 @@ output "public_subnet_ids" {
     aws_subnet.public_b.id,
   ]
 }
+
+output "ecr_repository_url" {
+  description = "ECR repository URL for the AfterPush API."
+  value       = aws_ecr_repository.api.repository_url
+}
