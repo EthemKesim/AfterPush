@@ -3,7 +3,7 @@ aws_profile        = "terraform"
 cluster_name       = "afterpush-eks"
 kubernetes_version = "1.36"
 
-node_instance_types = ["t3.medium"]
+node_instance_types = ["t3.small"]
 
 node_desired_size = 1
 node_min_size     = 1
