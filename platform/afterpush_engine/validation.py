@@ -11,6 +11,7 @@ def load_yaml(path: Path):
     with path.open("r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
+
 def load_schema() -> dict:
     schema_resource = (
         files("afterpush_engine")
@@ -63,10 +64,16 @@ def validate_business_rules(config: dict) -> list[str]:
 
     # Ingress rules
     ingress = spec.get("ingress", {})
+    profile = spec.get("profile", "local")
 
-    if ingress.get("enabled") is True and not ingress.get("host"):
+    if (
+        ingress.get("enabled") is True
+        and profile == "local"
+        and not ingress.get("host")
+    ):
         errors.append(
-            "spec.ingress.host is required when ingress is enabled."
+            "spec.ingress.host is required when ingress is enabled "
+            "for the local profile."
         )
 
     return errors

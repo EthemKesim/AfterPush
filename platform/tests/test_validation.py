@@ -103,16 +103,29 @@ def test_min_replicas_cannot_exceed_max_replicas():
     ) in errors
 
 
-def test_ingress_requires_host_when_enabled():
+def test_local_ingress_requires_host_when_enabled():
     config = get_valid_config()
 
+    config["spec"]["profile"] = "local"
     del config["spec"]["ingress"]["host"]
 
     errors = validate_business_rules(config)
 
     assert (
-        "spec.ingress.host is required when ingress is enabled."
+        "spec.ingress.host is required when ingress is enabled "
+        "for the local profile."
     ) in errors
+
+
+def test_eks_ingress_allows_missing_host_when_enabled():
+    config = get_valid_config()
+
+    config["spec"]["profile"] = "eks"
+    del config["spec"]["ingress"]["host"]
+
+    errors = validate_business_rules(config)
+
+    assert errors == []
 
 
 def test_application_name_rejects_path_traversal():

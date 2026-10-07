@@ -17,8 +17,7 @@ spec:
     path: /health
 
   ingress:
-    enabled: false
-    host: afterpush.local
+    enabled: true
 
   scaling:
     enabled: true
