@@ -1,19 +1,19 @@
 application:
   name: afterpush-api
 image:
-  repository: afterpush-api
-  tag: metrics
-  pullPolicy: Never
+  repository: 833090513321.dkr.ecr.eu-central-1.amazonaws.com/afterpush-api
+  tag: cb861fe5538164d73e358b26722adc66384f899e
+  pullPolicy: IfNotPresent
 service:
   type: ClusterIP
   port: 80
   targetPort: 3000
 config:
-  appEnv: local
-  logLevel: debug
+  appEnv: eks
+  logLevel: info
 ingress:
-  enabled: true
-  className: nginx
+  enabled: false
+  className: alb
   host: afterpush.local
   path: /
   pathType: Prefix
@@ -39,4 +39,4 @@ probes:
     initialDelaySeconds: 5
     periodSeconds: 10
 monitoring:
-  enabled: true
+  enabled: false

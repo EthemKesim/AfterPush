@@ -5,11 +5,11 @@ metadata:
   name: afterpush-api
 
 spec:
-  profile: local
+  profile: eks
 
   image:
-    repository: afterpush-api
-    tag: metrics
+    repository: 833090513321.dkr.ecr.eu-central-1.amazonaws.com/afterpush-api
+    tag: cb861fe5538164d73e358b26722adc66384f899e
 
   port: 3000
 
@@ -17,7 +17,7 @@ spec:
     path: /health
 
   ingress:
-    enabled: true
+    enabled: false
     host: afterpush.local
 
   scaling:
@@ -27,4 +27,4 @@ spec:
     targetCPUUtilization: 50
 
   monitoring:
-    enabled: true
+    enabled: false

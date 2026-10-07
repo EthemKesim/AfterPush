@@ -49,6 +49,15 @@
         "health"
       ],
       "properties": {
+        "profile": {
+          "type": "string",
+          "enum": [
+            "local",
+            "eks"
+          ],
+          "default": "local"
+        },
+
         "image": {
           "type": "object",
           "additionalProperties": false,

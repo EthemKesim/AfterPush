@@ -147,13 +147,14 @@ jobs:
         run: |
           afterpush validate platform/examples/afterpush.yaml
           afterpush validate platform/examples/payments-api.yaml
+          afterpush validate platform/environments/eks/afterpush.yaml
 
       - name: Run platform tests
         run: python -m pytest platform/tests -v
 
       - name: Verify generated GitOps values
         run: |
-          afterpush render platform/examples/afterpush.yaml > /tmp/afterpush-api-values.yaml
+          afterpush render platform/environments/eks/afterpush.yaml > /tmp/afterpush-api-values.yaml
           afterpush render platform/examples/payments-api.yaml > /tmp/payments-api-values.yaml
 
           diff -u gitops/apps/afterpush-api/values.yaml /tmp/afterpush-api-values.yaml
