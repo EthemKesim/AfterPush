@@ -1,4 +1,4 @@
-name: CD - Deploy to ECS
+name: CD - Build and Push to ECR
 
 on:
   workflow_dispatch:
@@ -9,16 +9,12 @@ permissions:
 
 env:
   AWS_REGION: eu-central-1
-  ECR_REPOSITORY: launchforge-api
-  ECS_CLUSTER: launchforge-cluster
-  ECS_SERVICE: launchforge-api-service
-  ECS_TASK_DEFINITION: ecs-task-definition.json
-  CONTAINER_NAME: launchforge-api
+  ECR_REPOSITORY: afterpush-api
 
 jobs:
-  deploy:
-    name: Build, Push and Deploy
-    runs-on: ubuntu-24.04-arm
+  build-and-push:
+    name: Build and Push Image
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -38,47 +34,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push ARM64 image
+      - name: Build and push AMD64 image
         uses: docker/build-push-action@v7
         with:
           context: ./app
-          platforms: linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
-      - name: Render Amazon ECS task definition
-        id: render-task-definition
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-
-      - name: Deploy Amazon ECS task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          wait-for-service-stability: true
-
-      - name: Get ALB DNS
-        id: alb
-        run: |
-          ALB_DNS=$(aws elbv2 describe-load-balancers \
-            --names launchforge-alb \
-            --query "LoadBalancers[0].DNSName" \
-            --output text)
-
-          echo "dns=$ALB_DNS" >> "$GITHUB_OUTPUT"
-
-      - name: Smoke test deployed application
-        run: |
-          echo "Testing health endpoint..."
-          curl --fail --retry 5 --retry-delay 5 \
-            http://${{ steps.alb.outputs.dns }}/health
-
-          echo "Testing version endpoint..."
-          curl --fail --retry 5 --retry-delay 5 \
-            http://${{ steps.alb.outputs.dns }}/version
