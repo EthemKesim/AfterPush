@@ -8,9 +8,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from afterpush_api.database import SessionLocal
-from afterpush_api.models import Project
-from afterpush_api.schemas import ProjectCreate, ProjectResponse
-
+from afterpush_api.models import Application, Project
+from afterpush_api.schemas import (
+    ApplicationCreate,
+    ApplicationResponse,
+    ApplicationUpdate,
+    ProjectCreate,
+    ProjectResponse,
+)
 from afterpush_engine.generation import generate_helm_values
 from afterpush_engine.validation import (
     load_schema,
@@ -181,3 +186,166 @@ def get_project(
         )
 
     return project
+
+
+@app.post(
+    "/api/v1/projects/{project_id}/applications",
+    response_model=ApplicationResponse,
+    status_code=201,
+)
+def create_application(
+    project_id: UUID,
+    application: ApplicationCreate,
+    db: Session = Depends(get_db),
+):
+    # Check whether the parent project exists
+    project = db.get(Project, project_id)
+
+    if project is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found",
+        )
+
+    # Create an application linked to the project
+    new_application = Application(
+        project_id=project_id,
+        name=application.name,
+        image=application.image,
+        port=application.port,
+        replicas=application.replicas,
+    )
+
+    db.add(new_application)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="An application with this name already exists in this project",
+        )
+
+    db.refresh(new_application)
+
+    return new_application
+
+
+
+@app.get(
+    "/api/v1/projects/{project_id}/applications",
+    response_model=list[ApplicationResponse],
+)
+def list_applications(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+):
+    # Verify that the parent project exists
+    project = db.get(Project, project_id)
+
+    if project is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Project not found",
+        )
+
+    # Retrieve applications belonging to this project
+    applications = (
+        db.query(Application)
+        .filter(Application.project_id == project_id)
+        .order_by(Application.created_at.desc())
+        .all()
+    )
+
+    return applications
+
+
+
+@app.get(
+    "/api/v1/applications/{application_id}",
+    response_model=ApplicationResponse,
+    responses={
+        404: {"description": "Application not found"},
+        422: {"description": "Invalid application ID"},
+    },
+)
+def get_application(
+    application_id: UUID,
+    db: Session = Depends(get_db),
+):
+    application = db.get(Application, application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    return application
+
+
+
+@app.patch(
+    "/api/v1/applications/{application_id}",
+    response_model=ApplicationResponse,
+    responses={
+        404: {"description": "Application not found"},
+        422: {"description": "Invalid application data"},
+    },
+)
+def update_application(
+    application_id: UUID,
+    updates: ApplicationUpdate,
+    db: Session = Depends(get_db),
+):
+    application = db.get(Application, application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    # Only update fields explicitly provided by the client
+    update_data = updates.model_dump(exclude_unset=True)
+
+    # Prevent explicitly setting non-nullable fields to null
+    if any(value is None for value in update_data.values()):
+        raise HTTPException(
+            status_code=422,
+            detail="Application fields cannot be null",
+        )
+
+    for field, value in update_data.items():
+        setattr(application, field, value)
+
+    db.commit()
+    db.refresh(application)
+
+    return application
+
+
+
+@app.delete(
+    "/api/v1/applications/{application_id}",
+    status_code=204,
+    responses={
+        404: {"description": "Application not found"},
+        422: {"description": "Invalid application ID"},
+    },
+)
+def delete_application(
+    application_id: UUID,
+    db: Session = Depends(get_db),
+):
+    application = db.get(Application, application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    db.delete(application)
+    db.commit()
