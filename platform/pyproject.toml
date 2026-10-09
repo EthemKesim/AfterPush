@@ -13,6 +13,9 @@ dependencies = [
     "jsonschema",
     "fastapi",
     "uvicorn[standard]",
+    "sqlalchemy>=2.0,<3.0",
+    "psycopg[binary]>=3.2,<4.0",
+    "alembic>=1.14,<2.0",
 ]
 
 [project.optional-dependencies]
