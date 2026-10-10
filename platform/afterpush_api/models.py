@@ -113,6 +113,15 @@ class Application(Base):
 class Deployment(Base):
     __tablename__ = "deployments"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "application_id",
+            "environment",
+            "revision",
+            name="uq_deployment_application_environment_revision",
+        ),
+    )
+
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
         default=uuid.uuid4,
@@ -138,6 +147,11 @@ class Deployment(Base):
         String(20),
         nullable=False,
         default="pending",
+    )
+
+    revision: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
