@@ -8,11 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from afterpush_api.database import SessionLocal
-from afterpush_api.models import Application, Project
+from afterpush_api.models import Application, Deployment, Project
 from afterpush_api.schemas import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationUpdate,
+    DeploymentCreate,
+    DeploymentResponse,
     ProjectCreate,
     ProjectResponse,
 )
@@ -188,6 +190,10 @@ def get_project(
     return project
 
 
+# =========================================================
+# APPLICATION MANAGEMENT
+# =========================================================
+
 @app.post(
     "/api/v1/projects/{project_id}/applications",
     response_model=ApplicationResponse,
@@ -198,7 +204,6 @@ def create_application(
     application: ApplicationCreate,
     db: Session = Depends(get_db),
 ):
-    # Check whether the parent project exists
     project = db.get(Project, project_id)
 
     if project is None:
@@ -207,7 +212,6 @@ def create_application(
             detail="Project not found",
         )
 
-    # Create an application linked to the project
     new_application = Application(
         project_id=project_id,
         name=application.name,
@@ -232,7 +236,6 @@ def create_application(
     return new_application
 
 
-
 @app.get(
     "/api/v1/projects/{project_id}/applications",
     response_model=list[ApplicationResponse],
@@ -241,7 +244,6 @@ def list_applications(
     project_id: UUID,
     db: Session = Depends(get_db),
 ):
-    # Verify that the parent project exists
     project = db.get(Project, project_id)
 
     if project is None:
@@ -250,7 +252,6 @@ def list_applications(
             detail="Project not found",
         )
 
-    # Retrieve applications belonging to this project
     applications = (
         db.query(Application)
         .filter(Application.project_id == project_id)
@@ -259,7 +260,6 @@ def list_applications(
     )
 
     return applications
-
 
 
 @app.get(
@@ -285,7 +285,6 @@ def get_application(
     return application
 
 
-
 @app.patch(
     "/api/v1/applications/{application_id}",
     response_model=ApplicationResponse,
@@ -307,10 +306,8 @@ def update_application(
             detail="Application not found",
         )
 
-    # Only update fields explicitly provided by the client
     update_data = updates.model_dump(exclude_unset=True)
 
-    # Prevent explicitly setting non-nullable fields to null
     if any(value is None for value in update_data.values()):
         raise HTTPException(
             status_code=422,
@@ -324,7 +321,6 @@ def update_application(
     db.refresh(application)
 
     return application
-
 
 
 @app.delete(
@@ -347,5 +343,109 @@ def delete_application(
             detail="Application not found",
         )
 
+    # Deployment history must be handled before deleting
+    # an application that has deployments.
+    if application.deployments:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete an application with deployment history",
+        )
+
     db.delete(application)
     db.commit()
+
+
+# =========================================================
+# DEPLOYMENT MANAGEMENT
+# =========================================================
+
+@app.post(
+    "/api/v1/applications/{application_id}/deployments",
+    response_model=DeploymentResponse,
+    status_code=201,
+    responses={
+        404: {"description": "Application not found"},
+        422: {"description": "Invalid deployment data"},
+    },
+)
+def create_deployment(
+    application_id: UUID,
+    deployment: DeploymentCreate,
+    db: Session = Depends(get_db),
+):
+    application = db.get(Application, application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    new_deployment = Deployment(
+        application_id=application_id,
+        environment=deployment.environment,
+        image_tag=deployment.image_tag,
+        status="pending",
+    )
+
+    db.add(new_deployment)
+    db.commit()
+    db.refresh(new_deployment)
+
+    return new_deployment
+
+
+@app.get(
+    "/api/v1/applications/{application_id}/deployments",
+    response_model=list[DeploymentResponse],
+    responses={
+        404: {"description": "Application not found"},
+        422: {"description": "Invalid application ID"},
+    },
+)
+def list_deployments(
+    application_id: UUID,
+    db: Session = Depends(get_db),
+):
+    application = db.get(Application, application_id)
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found",
+        )
+
+    deployments = (
+        db.query(Deployment)
+        .filter(Deployment.application_id == application_id)
+        .order_by(
+            Deployment.created_at.desc(),
+            Deployment.id.desc(),
+        )
+        .all()
+    )
+
+    return deployments
+
+
+@app.get(
+    "/api/v1/deployments/{deployment_id}",
+    response_model=DeploymentResponse,
+    responses={
+        404: {"description": "Deployment not found"},
+        422: {"description": "Invalid deployment ID"},
+    },
+)
+def get_deployment(
+    deployment_id: UUID,
+    db: Session = Depends(get_db),
+):
+    deployment = db.get(Deployment, deployment_id)
+
+    if deployment is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Deployment not found",
+        )
+
+    return deployment

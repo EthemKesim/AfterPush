@@ -1,5 +1,6 @@
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -82,3 +83,23 @@ class ApplicationResponse(BaseModel):
     replicas: int
     created_at: datetime
 
+
+class DeploymentCreate(BaseModel):
+    environment: Literal["dev", "staging", "prod"]
+
+    image_tag: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$",
+    )
+
+
+class DeploymentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    application_id: UUID
+    environment: str
+    image_tag: str
+    status: str
+    created_at: datetime
