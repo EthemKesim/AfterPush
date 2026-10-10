@@ -106,4 +106,5 @@ class DeploymentResponse(BaseModel):
     environment: str
     image_tag: str
     status: str
+    revision: int
     created_at: datetime

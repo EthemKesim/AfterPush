@@ -19,6 +19,9 @@ from afterpush_api.schemas import (
     ProjectCreate,
     ProjectResponse,
 )
+from afterpush_api.services.deployment_revision import (
+    create_versioned_deployment,
+)
 from afterpush_engine.generation import generate_helm_values
 from afterpush_engine.validation import (
     load_schema,
@@ -344,8 +347,6 @@ def delete_application(
             detail="Application not found",
         )
 
-    # Deployment history must be handled before deleting
-    # an application that has deployments.
     if application.deployments:
         raise HTTPException(
             status_code=409,
@@ -374,26 +375,28 @@ def create_deployment(
     deployment: DeploymentCreate,
     db: Session = Depends(get_db),
 ):
-    application = db.get(Application, application_id)
-
-    if application is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Application not found",
+    try:
+        new_deployment = create_versioned_deployment(
+            db=db,
+            application_id=application_id,
+            environment=deployment.environment,
+            image_tag=deployment.image_tag,
         )
 
-    new_deployment = Deployment(
-        application_id=application_id,
-        environment=deployment.environment,
-        image_tag=deployment.image_tag,
-        status="pending",
-    )
+        if new_deployment is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Application not found",
+            )
 
-    db.add(new_deployment)
-    db.commit()
-    db.refresh(new_deployment)
+        db.commit()
+        db.refresh(new_deployment)
 
-    return new_deployment
+        return new_deployment
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @app.get(
@@ -451,6 +454,7 @@ def get_deployment(
 
     return deployment
 
+
 @app.patch(
     "/api/v1/deployments/{deployment_id}/status",
     response_model=DeploymentResponse,
@@ -472,7 +476,6 @@ def update_deployment_status(
         "failed": set(),
     }
 
-    # Lock the row to serialize competing status updates on PostgreSQL.
     deployment = (
         db.query(Deployment)
         .filter(Deployment.id == deployment_id)
@@ -481,7 +484,10 @@ def update_deployment_status(
     )
 
     if deployment is None:
-        raise HTTPException(status_code=404, detail="Deployment not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Deployment not found",
+        )
 
     if update.status not in allowed_transitions.get(deployment.status, set()):
         raise HTTPException(
@@ -492,4 +498,5 @@ def update_deployment_status(
     deployment.status = update.status
     db.commit()
     db.refresh(deployment)
+
     return deployment

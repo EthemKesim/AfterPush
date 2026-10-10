@@ -15,11 +15,19 @@ TEST_DATABASE_URL = os.environ.get(
 )
 
 if TEST_DATABASE_URL.rsplit("/", 1)[-1] != "afterpush_test":
-    raise RuntimeError("Tests must use the afterpush_test database")
+    raise RuntimeError(
+        "Tests must use the afterpush_test database"
+    )
 
 
 @pytest.fixture
-def client():
+def db_session():
+    """
+    Provide an isolated PostgreSQL session for each test.
+
+    Changes are rolled back after the test finishes.
+    """
+
     engine = create_engine(TEST_DATABASE_URL)
 
     connection = engine.connect()
@@ -30,8 +38,24 @@ def client():
         join_transaction_mode="create_savepoint",
     )
 
-    def override_get_db():
+    try:
         yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
+        engine.dispose()
+
+
+@pytest.fixture
+def client(db_session):
+    """
+    Provide a FastAPI test client using the isolated
+    PostgreSQL test session.
+    """
+
+    def override_get_db():
+        yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -40,7 +64,3 @@ def client():
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)
-        session.close()
-        transaction.rollback()
-        connection.close()
-        engine.dispose()

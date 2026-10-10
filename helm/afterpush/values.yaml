@@ -1,3 +1,4 @@
+
 application:
   name: afterpush-api
 
@@ -20,6 +21,10 @@ service:
 config:
   appEnv: local
   logLevel: debug
+
+secret:
+  enabled: false
+  name: ""
 
 ingress:
   enabled: true
