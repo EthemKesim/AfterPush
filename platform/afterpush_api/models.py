@@ -104,3 +104,48 @@ class Application(Base):
     project: Mapped["Project"] = relationship(
         back_populates="applications",
     )
+
+    deployments: Mapped[list["Deployment"]] = relationship(
+        back_populates="application",
+    )
+
+
+class Deployment(Base):
+    __tablename__ = "deployments"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("applications.id"),
+        nullable=False,
+        index=True,
+    )
+
+    environment: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+
+    image_tag: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    application: Mapped["Application"] = relationship(
+        back_populates="deployments",
+    )
