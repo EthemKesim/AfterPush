@@ -3,7 +3,7 @@ import multiprocessing
 import os
 import threading
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import yaml
 from sqlalchemy import create_engine
@@ -13,6 +13,7 @@ from afterpush_api.models import Application, Deployment, Project
 from afterpush_api.services.deployment_reconciliation import (
     check_deployment_drift,
 )
+from afterpush_api.services.gitops import get_values_path
 from afterpush_api.services.locking import gitops_application_lock
 
 
@@ -25,11 +26,18 @@ if TEST_DATABASE_URL.rsplit("/", 1)[-1] != "afterpush_test":
     raise RuntimeError("Tests must use afterpush_test")
 
 
-def hold_lock(root, application_name, locked, release):
+def hold_lock(
+    root: str,
+    application_name: str,
+    project_id: UUID,
+    locked,
+    release,
+):
     with gitops_application_lock(
         gitops_root=Path(root),
         application_name=application_name,
         environment="staging",
+        project_id=project_id,
     ):
         locked.set()
 
@@ -79,12 +87,11 @@ def test_reconciliation_blocks_until_lock_released(tmp_path):
 
             db.commit()
 
-        values_path = (
-            tmp_path
-            / "apps"
-            / "staging"
-            / application_name
-            / "values.yaml"
+        values_path = get_values_path(
+            gitops_root=tmp_path,
+            application_name=application_name,
+            environment="staging",
+            project_id=project_id,
         )
         values_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -134,6 +141,7 @@ def test_reconciliation_blocks_until_lock_released(tmp_path):
             args=(
                 str(tmp_path),
                 application_name,
+                project_id,
                 locked,
                 release,
             ),
@@ -157,8 +165,8 @@ def test_reconciliation_blocks_until_lock_released(tmp_path):
                 "Reconciliation worker did not start"
             )
 
-            # While the lock is held, reconciliation
-            # must not complete.
+            # While the project's GitOps lock is held,
+            # reconciliation must not complete.
             assert not finished.wait(timeout=0.3), (
                 "Reconciliation finished while lock was held"
             )

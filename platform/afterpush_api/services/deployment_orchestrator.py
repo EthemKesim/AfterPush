@@ -22,14 +22,15 @@ def apply_deployment(
     Apply a pending deployment to the local GitOps configuration.
 
     Returns:
-        "applied" when GitOps configuration is updated.
-        "skipped" when a newer deployment exists.
-        "not_found" when the deployment does not exist.
-        "invalid_status" when it is no longer pending.
+        "applied"
+        "skipped"
+        "not_found"
+        "invalid_status"
 
     Transaction ownership:
-        This function commits or rolls back the supplied session.
-        The caller must not have unrelated uncommitted changes.
+        Commits or rolls back the supplied session.
+
+    Caller must not have unrelated uncommitted changes.
     """
 
     try:
@@ -41,7 +42,9 @@ def apply_deployment(
 
         application = (
             db.query(Application)
-            .filter(Application.id == deployment.application_id)
+            .filter(
+                Application.id == deployment.application_id
+            )
             .with_for_update()
             .one_or_none()
         )
@@ -68,10 +71,10 @@ def apply_deployment(
             image_tag=deployment.image_tag,
             port=application.port,
             replicas=application.replicas,
+            project_id=application.project_id,
         )
 
         deployment.status = "running"
-
         db.commit()
 
         return "applied"

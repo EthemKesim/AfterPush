@@ -1,14 +1,14 @@
 
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-import pytest
 import yaml
 
 from afterpush_api.models import Application, Deployment, Project
 from afterpush_api.services.deployment_reconciliation import (
     check_deployment_drift,
 )
+from afterpush_api.services.gitops import get_values_path
 
 
 def create_test_application(db_session):
@@ -29,7 +29,7 @@ def create_test_application(db_session):
     db_session.add(application)
     db_session.flush()
 
-    return application.id
+    return application.id, project.id
 
 
 def create_deployment(
@@ -52,13 +52,16 @@ def create_deployment(
     return deployment.id
 
 
-def write_test_values(tmp_path: Path, image_tag: str):
-    values_path = (
-        tmp_path
-        / "apps"
-        / "staging"
-        / "reconciliation-api"
-        / "values.yaml"
+def write_test_values(
+    tmp_path: Path,
+    project_id: UUID,
+    image_tag: str,
+):
+    values_path = get_values_path(
+        gitops_root=tmp_path,
+        application_name="reconciliation-api",
+        environment="staging",
+        project_id=project_id,
     )
 
     values_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,10 +92,12 @@ def test_matching_gitops_values_are_in_sync(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, project_id = create_test_application(
+        db_session
+    )
     create_deployment(db_session, application_id)
 
-    write_test_values(tmp_path, "v2.0.0")
+    write_test_values(tmp_path, project_id, "v2.0.0")
 
     assert check_drift(
         db_session, application_id, tmp_path
@@ -103,10 +108,12 @@ def test_different_image_tag_is_detected(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, project_id = create_test_application(
+        db_session
+    )
     create_deployment(db_session, application_id)
 
-    write_test_values(tmp_path, "v1.0.0")
+    write_test_values(tmp_path, project_id, "v1.0.0")
 
     assert check_drift(
         db_session, application_id, tmp_path
@@ -117,7 +124,7 @@ def test_missing_gitops_values_is_detected(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, _ = create_test_application(db_session)
     create_deployment(db_session, application_id)
 
     assert check_drift(
@@ -129,7 +136,7 @@ def test_no_applied_deployment_is_reported(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, _ = create_test_application(db_session)
 
     assert check_drift(
         db_session, application_id, tmp_path
@@ -140,7 +147,9 @@ def test_latest_pending_deployment_blocks_reconciliation(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, project_id = create_test_application(
+        db_session
+    )
 
     create_deployment(
         db_session,
@@ -166,7 +175,7 @@ def test_latest_pending_deployment_blocks_reconciliation(
         status="pending",
     )
 
-    write_test_values(tmp_path, "v2.0.0")
+    write_test_values(tmp_path, project_id, "v2.0.0")
 
     assert check_drift(
         db_session, application_id, tmp_path
@@ -177,7 +186,9 @@ def test_latest_failed_deployment_blocks_reconciliation(
     db_session,
     tmp_path: Path,
 ):
-    application_id = create_test_application(db_session)
+    application_id, project_id = create_test_application(
+        db_session
+    )
 
     create_deployment(
         db_session,
@@ -195,7 +206,7 @@ def test_latest_failed_deployment_blocks_reconciliation(
         status="failed",
     )
 
-    write_test_values(tmp_path, "v1.0.0")
+    write_test_values(tmp_path, project_id, "v1.0.0")
 
     assert check_drift(
         db_session, application_id, tmp_path

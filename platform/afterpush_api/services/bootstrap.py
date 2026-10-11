@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from uuid import UUID
 
 import yaml
 
@@ -111,9 +112,13 @@ def bootstrap_gitops_application(
     image_tag: str,
     port: int,
     replicas: int,
+    project_id: UUID | None = None,
 ) -> Path:
     """
     Create initial GitOps values for a new application.
+
+    When project_id is supplied, the values file is stored
+    under the project's UUID directory.
 
     Existing values files are never overwritten.
     """
@@ -122,6 +127,7 @@ def bootstrap_gitops_application(
         gitops_root,
         application_name,
         environment,
+        project_id=project_id,
     )
 
     values = build_initial_values(

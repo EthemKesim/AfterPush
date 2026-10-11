@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from afterpush_api.models import Application, Deployment, Project
 from afterpush_api.services.deployment_orchestrator import apply_deployment
 from conftest import TEST_DATABASE_URL
-
+from afterpush_api.services.gitops import get_values_path
 
 def create_test_engine():
     assert TEST_DATABASE_URL.rsplit("/", 1)[-1] == "afterpush_test"
@@ -83,13 +83,12 @@ def cleanup_test_records(engine, project_id, application_id):
         db.commit()
 
 
-def values_path(tmp_path):
-    return (
-        tmp_path
-        / "apps"
-        / "staging"
-        / "concurrent-service"
-        / "values.yaml"
+def values_path(tmp_path, project_id):
+    return get_values_path(
+        gitops_root=tmp_path,
+        application_name="concurrent-service",
+        environment="staging",
+        project_id=project_id,
     )
 
 
@@ -143,7 +142,7 @@ def test_orchestrator_waits_for_application_lock(tmp_path):
             deployment = db.get(Deployment, deployment_ids[0])
             assert deployment.status == "running"
 
-        assert values_path(tmp_path).is_file()
+        assert values_path(tmp_path, project_id).is_file()
 
     finally:
         try:
@@ -197,8 +196,10 @@ def test_concurrent_revisions_keep_latest_gitops_version(tmp_path):
             assert first.status == "pending"
             assert second.status == "running"
 
-        with values_path(tmp_path).open("r", encoding="utf-8") as file:
-            values = yaml.safe_load(file)
+        with values_path(tmp_path, project_id).open(
+                "r", encoding="utf-8"
+        ) as file:
+                values = yaml.safe_load(file)
 
         assert values["image"]["tag"] == "v2.0.0"
         assert values["image"]["repository"] == "nginx"
