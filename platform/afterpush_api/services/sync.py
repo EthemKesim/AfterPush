@@ -1,5 +1,6 @@
 
 from pathlib import Path
+from uuid import UUID
 
 from afterpush_api.services.bootstrap import (
     bootstrap_gitops_application,
@@ -22,13 +23,16 @@ def sync_gitops_application(
     image_tag: str,
     port: int,
     replicas: int,
+    project_id: UUID | None = None,
 ) -> Path:
     """
     Create or update an application's GitOps configuration.
 
-    A filesystem lock serializes cooperating processes that
-    modify the same application/environment on the same
-    filesystem.
+    When project_id is supplied, the GitOps configuration
+    and filesystem lock are isolated by project.
+
+    A filesystem lock serializes cooperating processes
+    modifying the same application/environment.
 
     Bootstrap:
         Creates values.yaml when the application is new.
@@ -42,11 +46,13 @@ def sync_gitops_application(
         gitops_root=gitops_root,
         application_name=application_name,
         environment=environment,
+        project_id=project_id,
     ):
         values_path = get_values_path(
             gitops_root=gitops_root,
             application_name=application_name,
             environment=environment,
+            project_id=project_id,
         )
 
         if not values_path.exists():
@@ -58,6 +64,7 @@ def sync_gitops_application(
                 image_tag=image_tag,
                 port=port,
                 replicas=replicas,
+                project_id=project_id,
             )
 
         updated_values = prepare_gitops_values(
@@ -66,6 +73,7 @@ def sync_gitops_application(
             environment=environment,
             image_repository=image_repository,
             image_tag=image_tag,
+            project_id=project_id,
         )
 
         return write_gitops_values(
@@ -73,4 +81,5 @@ def sync_gitops_application(
             application_name=application_name,
             environment=environment,
             values=updated_values,
+            project_id=project_id,
         )

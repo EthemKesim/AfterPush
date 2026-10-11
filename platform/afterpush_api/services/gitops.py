@@ -3,6 +3,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from uuid import UUID
 
 import yaml
 
@@ -34,43 +35,67 @@ def validate_name(name: str) -> None:
         )
 
 
+def validate_project_id(project_id: UUID | None) -> None:
+    if project_id is not None and not isinstance(project_id, UUID):
+        raise InvalidGitOpsPathError(
+            "GitOps project_id must be a UUID."
+        )
+
+
 def get_values_path(
     gitops_root: Path,
     application_name: str,
     environment: str,
+    project_id: UUID | None = None,
 ) -> Path:
     """
     Return a safe GitOps values path.
+
+    When project_id is supplied, isolate the application
+    under its project's UUID directory.
 
     Reject symlinks within the managed GitOps path.
     """
 
     validate_name(application_name)
     validate_name(environment)
+    validate_project_id(project_id)
 
     root = Path(gitops_root)
+    apps_directory = root / "apps"
+    environment_directory = apps_directory / environment
 
-    values_path = (
-        root
-        / "apps"
-        / environment
-        / application_name
-        / "values.yaml"
-    )
+    if project_id is None:
+        application_directory = (
+            environment_directory / application_name
+        )
+        managed_paths = (
+            apps_directory,
+            environment_directory,
+            application_directory,
+        )
+    else:
+        project_directory = (
+            environment_directory / str(project_id)
+        )
+        application_directory = (
+            project_directory / application_name
+        )
+        managed_paths = (
+            apps_directory,
+            environment_directory,
+            project_directory,
+            application_directory,
+        )
 
-    managed_paths = (
-        root / "apps",
-        root / "apps" / environment,
-        root / "apps" / environment / application_name,
-        values_path,
-    )
+    values_path = application_directory / "values.yaml"
 
     if root.is_symlink():
         raise InvalidGitOpsPathError(
             f"GitOps root cannot be a symlink: {root}"
         )
 
-    for path in managed_paths:
+    for path in (*managed_paths, values_path):
         if path.is_symlink():
             raise InvalidGitOpsPathError(
                 f"GitOps path cannot contain symlinks: {path}"
@@ -93,6 +118,7 @@ def prepare_gitops_values(
     environment: str,
     image_repository: str,
     image_tag: str,
+    project_id: UUID | None = None,
 ) -> dict:
     """
     Prepare updated Helm values without modifying files.
@@ -102,6 +128,7 @@ def prepare_gitops_values(
         gitops_root,
         application_name,
         environment,
+        project_id=project_id,
     )
 
     if not values_path.is_file():
@@ -141,6 +168,7 @@ def write_gitops_values(
     application_name: str,
     environment: str,
     values: dict,
+    project_id: UUID | None = None,
 ) -> Path:
     """
     Atomically replace an existing Helm values file.
@@ -150,6 +178,7 @@ def write_gitops_values(
         gitops_root,
         application_name,
         environment,
+        project_id=project_id,
     )
 
     if not values_path.is_file():
@@ -189,11 +218,11 @@ def write_gitops_values(
             temporary_file.flush()
             os.fsync(temporary_file.fileno())
 
-        # Recheck before replacing the target file.
         get_values_path(
             gitops_root,
             application_name,
             environment,
+            project_id=project_id,
         )
 
         os.replace(temporary_path, values_path)

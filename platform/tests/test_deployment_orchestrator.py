@@ -1,6 +1,6 @@
 
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 import yaml
@@ -9,7 +9,10 @@ from afterpush_api.models import Application, Deployment, Project
 from afterpush_api.services.deployment_orchestrator import (
     apply_deployment,
 )
-from afterpush_api.services.gitops import GitOpsError
+from afterpush_api.services.gitops import (
+    GitOpsError,
+    get_values_path,
+)
 
 
 def create_test_application(db_session):
@@ -33,25 +36,32 @@ def create_test_application(db_session):
     return application
 
 
-def get_test_values_path(tmp_path: Path) -> Path:
-    return (
-        tmp_path
-        / "apps"
-        / "staging"
-        / "payment-service"
-        / "values.yaml"
+def get_test_values_path(
+    tmp_path: Path,
+    project_id: UUID,
+) -> Path:
+    return get_values_path(
+        gitops_root=tmp_path,
+        application_name="payment-service",
+        environment="staging",
+        project_id=project_id,
     )
 
 
-def read_test_values(tmp_path: Path) -> dict:
-    with get_test_values_path(tmp_path).open(
-        "r", encoding="utf-8"
-    ) as file:
+def read_test_values(
+    tmp_path: Path,
+    project_id: UUID,
+) -> dict:
+    with get_test_values_path(
+        tmp_path,
+        project_id,
+    ).open("r", encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 
 def test_older_deployment_is_skipped(db_session, tmp_path: Path):
     application = create_test_application(db_session)
+    project_id = application.project_id
 
     older = Deployment(
         application_id=application.id,
@@ -81,7 +91,10 @@ def test_older_deployment_is_skipped(db_session, tmp_path: Path):
 
     assert result == "skipped"
     assert not db_session.in_transaction()
-    assert not get_test_values_path(tmp_path).exists()
+    assert not get_test_values_path(
+        tmp_path,
+        project_id,
+    ).exists()
 
     saved = db_session.get(Deployment, older_id)
     assert saved is not None
@@ -90,6 +103,7 @@ def test_older_deployment_is_skipped(db_session, tmp_path: Path):
 
 def test_latest_deployment_is_applied(db_session, tmp_path: Path):
     application = create_test_application(db_session)
+    project_id = application.project_id
 
     deployment = Deployment(
         application_id=application.id,
@@ -117,7 +131,7 @@ def test_latest_deployment_is_applied(db_session, tmp_path: Path):
     assert saved is not None
     assert saved.status == "running"
 
-    values = read_test_values(tmp_path)
+    values = read_test_values(tmp_path, project_id)
     assert values["application"]["name"] == "payment-service"
     assert values["image"]["repository"] == "nginx"
     assert values["image"]["tag"] == "v2.0.0"
@@ -130,6 +144,7 @@ def test_new_revision_updates_existing_gitops_values(
 ):
     application = create_test_application(db_session)
     application_id = application.id
+    project_id = application.project_id
 
     first = Deployment(
         application_id=application_id,
@@ -150,15 +165,16 @@ def test_new_revision_updates_existing_gitops_values(
         gitops_root=tmp_path,
     ) == "applied"
 
-    initial_values = read_test_values(tmp_path)
+    initial_values = read_test_values(tmp_path, project_id)
     assert initial_values["image"]["tag"] == "v1.0.0"
 
     initial_values["config"]["logLevel"] = "debug"
     initial_values["service"]["port"] = 8080
 
-    with get_test_values_path(tmp_path).open(
-        "w", encoding="utf-8"
-    ) as file:
+    with get_test_values_path(
+        tmp_path,
+        project_id,
+    ).open("w", encoding="utf-8") as file:
         yaml.safe_dump(initial_values, file, sort_keys=False)
 
     second = Deployment(
@@ -180,7 +196,7 @@ def test_new_revision_updates_existing_gitops_values(
         gitops_root=tmp_path,
     ) == "applied"
 
-    updated = read_test_values(tmp_path)
+    updated = read_test_values(tmp_path, project_id)
 
     assert updated["image"]["repository"] == "nginx"
     assert updated["image"]["tag"] == "v2.0.0"
@@ -196,7 +212,10 @@ def test_new_revision_updates_existing_gitops_values(
     ) == "invalid_status"
 
     assert not db_session.in_transaction()
-    assert read_test_values(tmp_path)["image"]["tag"] == "v2.0.0"
+    assert read_test_values(
+        tmp_path,
+        project_id,
+    )["image"]["tag"] == "v2.0.0"
 
 
 def test_gitops_failure_keeps_deployment_pending(
@@ -204,6 +223,7 @@ def test_gitops_failure_keeps_deployment_pending(
     tmp_path: Path,
 ):
     application = create_test_application(db_session)
+    project_id = application.project_id
 
     deployment = Deployment(
         application_id=application.id,
@@ -218,7 +238,10 @@ def test_gitops_failure_keeps_deployment_pending(
 
     deployment_id = deployment.id
 
-    values_path = get_test_values_path(tmp_path)
+    values_path = get_test_values_path(
+        tmp_path,
+        project_id,
+    )
     values_path.parent.mkdir(parents=True, exist_ok=True)
     values_path.write_text(
         "image: invalid-image-structure\n",

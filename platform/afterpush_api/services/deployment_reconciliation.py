@@ -29,7 +29,8 @@ def check_deployment_drift(
         "deployment_pending" when the latest revision is pending.
         "deployment_failed" when the latest revision failed.
 
-    The filesystem lock coordinates GitOps reads and writes.
+    GitOps paths and filesystem locks are isolated by project.
+
     This function does not modify GitOps values.
     """
 
@@ -66,11 +67,13 @@ def check_deployment_drift(
         gitops_root=gitops_root,
         application_name=application.name,
         environment=environment,
+        project_id=application.project_id,
     ):
         values_path = get_values_path(
             gitops_root=gitops_root,
             application_name=application.name,
             environment=environment,
+            project_id=application.project_id,
         )
 
         if not values_path.is_file():
