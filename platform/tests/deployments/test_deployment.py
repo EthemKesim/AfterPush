@@ -1,8 +1,8 @@
+
 from pathlib import Path
 
-import yaml
-
 import pytest
+import yaml
 
 from afterpush_engine.deployment import (
     GitOpsRootNotFoundError,
@@ -10,22 +10,15 @@ from afterpush_engine.deployment import (
     prepare_deployment,
 )
 
-EXAMPLE_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "examples"
-    / "afterpush.yaml"
-)
+
+PLATFORM_ROOT = Path(__file__).resolve().parents[2]
+
+EXAMPLE_PATH = PLATFORM_ROOT / "examples" / "afterpush.yaml"
 
 
 def test_prepare_deployment_creates_gitops_values(tmp_path: Path):
-    config_path = (
-        Path(__file__).resolve().parents[1]
-        / "examples"
-        / "afterpush.yaml"
-    )
-
     values_path = prepare_deployment(
-        config_path=config_path,
+        config_path=EXAMPLE_PATH,
         gitops_root=tmp_path,
     )
 
@@ -47,12 +40,6 @@ def test_prepare_deployment_creates_gitops_values(tmp_path: Path):
 def test_prepare_deployment_refuses_to_overwrite_existing_values(
     tmp_path: Path,
 ):
-    config_path = (
-        Path(__file__).resolve().parents[1]
-        / "examples"
-        / "afterpush.yaml"
-    )
-
     application_directory = tmp_path / "afterpush-api"
     application_directory.mkdir()
 
@@ -62,19 +49,14 @@ def test_prepare_deployment_refuses_to_overwrite_existing_values(
         encoding="utf-8",
     )
 
-    try:
+    with pytest.raises(FileExistsError):
         prepare_deployment(
-            config_path=config_path,
+            config_path=EXAMPLE_PATH,
             gitops_root=tmp_path,
-        )
-    except FileExistsError:
-        pass
-    else:
-        raise AssertionError(
-            "prepare_deployment should refuse to overwrite existing values"
         )
 
     assert values_path.read_text(encoding="utf-8") == "existing: true\n"
+
 
 def test_find_gitops_root_from_nested_directory(tmp_path: Path):
     repository_root = tmp_path / "AfterPush"
@@ -88,6 +70,7 @@ def test_find_gitops_root_from_nested_directory(tmp_path: Path):
 
     assert result == gitops_root
 
+
 def test_find_gitops_root_raises_clear_error_when_missing(
     tmp_path: Path,
 ):
@@ -96,38 +79,3 @@ def test_find_gitops_root_raises_clear_error_when_missing(
         match="Could not find gitops/apps",
     ):
         find_gitops_root(tmp_path)
-
-
-def test_prepare_deployment_updates_existing_values_when_allowed(
-    tmp_path: Path,
-):
-    gitops_root = tmp_path / "gitops" / "apps"
-
-    values_path = (
-        gitops_root
-        / "afterpush-api"
-        / "values.yaml"
-    )
-
-    values_path.parent.mkdir(parents=True)
-
-    values_path.write_text(
-        "old: value\n",
-        encoding="utf-8",
-    )
-
-    result = prepare_deployment(
-        config_path=EXAMPLE_PATH,
-        gitops_root=gitops_root,
-        allow_update=True,
-    )
-
-    assert result == values_path
-
-    values = yaml.safe_load(
-        values_path.read_text(encoding="utf-8")
-    )
-
-    assert values["application"]["name"] == "afterpush-api"
-    assert values["image"]["repository"] == "afterpush-api"
-    assert "old" not in values

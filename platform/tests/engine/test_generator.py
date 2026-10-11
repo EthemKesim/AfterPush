@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PLATFORM_ROOT = PROJECT_ROOT / "platform"
 
 if str(PLATFORM_ROOT) not in sys.path:

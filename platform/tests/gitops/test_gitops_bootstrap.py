@@ -1,11 +1,18 @@
 
+from uuid import UUID
+
 import pytest
 import yaml
 
 from afterpush_api.services.bootstrap import (
     GitOpsBootstrapError,
     bootstrap_gitops_application,
+    build_resource_name,
 )
+
+
+PROJECT_A = UUID("123e4567-e89b-12d3-a456-426614174000")
+PROJECT_B = UUID("123e4567-e89b-12d3-a456-426614174001")
 
 
 def test_bootstrap_creates_values_file(tmp_path):
@@ -26,6 +33,7 @@ def test_bootstrap_creates_values_file(tmp_path):
     )
 
     assert values["application"]["name"] == "payment-service"
+    assert "resourceName" not in values["application"]
     assert values["environment"]["name"] == "staging"
     assert values["image"]["repository"] == "nginx"
     assert values["image"]["tag"] == "v1.0.0"
@@ -112,3 +120,105 @@ def test_bootstrap_separates_environments(tmp_path):
     assert dev_path != staging_path
     assert dev_path.is_file()
     assert staging_path.is_file()
+
+
+def test_resource_name_is_stable():
+    first = build_resource_name("backend-api", PROJECT_A)
+    second = build_resource_name("backend-api", PROJECT_A)
+
+    assert first == second
+
+
+def test_resource_names_differ_between_projects():
+    first = build_resource_name("backend-api", PROJECT_A)
+    second = build_resource_name("backend-api", PROJECT_B)
+
+    assert first != second
+
+
+def test_resource_names_differ_between_applications():
+    first = build_resource_name("backend-api", PROJECT_A)
+    second = build_resource_name("backend-worker", PROJECT_A)
+
+    assert first != second
+
+
+def test_resource_names_differ_for_similar_long_names():
+    first = build_resource_name(
+        "backend-service-for-customer-orders",
+        PROJECT_A,
+    )
+    second = build_resource_name(
+        "backend-service-for-customer-payments",
+        PROJECT_A,
+    )
+
+    assert first != second
+
+
+@pytest.mark.parametrize(
+    "application_name",
+    [
+        "backend",
+        "backend-api",
+        "a" * 100,
+    ],
+)
+def test_resource_name_is_valid_and_short(application_name):
+    resource_name = build_resource_name(
+        application_name,
+        PROJECT_A,
+    )
+
+    assert len(resource_name) <= 45
+    assert resource_name[0].isalnum()
+    assert resource_name[-1].isalnum()
+    assert all(
+        character.islower()
+        or character.isdigit()
+        or character == "-"
+        for character in resource_name
+    )
+
+
+def test_bootstrap_writes_project_resource_name(tmp_path):
+    values_path = bootstrap_gitops_application(
+        gitops_root=tmp_path,
+        application_name="backend-api",
+        environment="staging",
+        image_repository="nginx",
+        image_tag="v1.0.0",
+        port=3000,
+        replicas=2,
+        project_id=PROJECT_A,
+    )
+
+    values = yaml.safe_load(
+        values_path.read_text(encoding="utf-8")
+    )
+
+    assert values["application"]["name"] == "backend-api"
+    assert values["application"]["resourceName"] == build_resource_name(
+        "backend-api",
+        PROJECT_A,
+    )
+    assert str(PROJECT_A) in str(values_path)
+
+
+def test_legacy_bootstrap_remains_compatible(tmp_path):
+    values_path = bootstrap_gitops_application(
+        gitops_root=tmp_path,
+        application_name="backend-api",
+        environment="dev",
+        image_repository="nginx",
+        image_tag="v1",
+        port=3000,
+        replicas=1,
+    )
+
+    values = yaml.safe_load(
+        values_path.read_text(encoding="utf-8")
+    )
+
+    assert values["application"]["name"] == "backend-api"
+    assert "resourceName" not in values["application"]

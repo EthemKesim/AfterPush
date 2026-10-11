@@ -7,7 +7,7 @@ from afterpush_engine.pipeline import build_helm_values
 
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PLATFORM_ROOT = PROJECT_ROOT / "platform"
 
 if str(PLATFORM_ROOT) not in sys.path:
@@ -102,7 +102,7 @@ def test_deploy_command_prepares_gitops_values(
     capsys,
 ):
     config_path = (
-        Path(__file__).resolve().parents[1]
+        Path(__file__).resolve().parents[2]
         / "examples"
         / "afterpush.yaml"
     )

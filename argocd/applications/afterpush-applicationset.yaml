@@ -1,3 +1,4 @@
+
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 
@@ -15,7 +16,7 @@ spec:
         repoURL: https://github.com/EthemKesim/AfterPush.git
         revision: main
         directories:
-          - path: gitops/apps/*
+          - path: gitops/apps/afterpush-api
 
   template:
     metadata:
