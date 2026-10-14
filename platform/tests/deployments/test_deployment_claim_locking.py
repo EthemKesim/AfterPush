@@ -1,40 +1,37 @@
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Event
 from uuid import uuid4
 
-from sqlalchemy import create_engine, delete
+from sqlalchemy import create_engine, delete, text
 from sqlalchemy.orm import Session
 
 from afterpush_api.models import Application, Deployment, Project
-from afterpush_api.services.deployment_worker import (
-    process_pending_deployments,
-)
-from afterpush_api.services.gitops import get_values_path
+from afterpush_api.services.deployment_claim import claim_deployment
 from conftest import TEST_DATABASE_URL
 
 
-def test_parallel_workers_process_deployment_once(tmp_path):
-    engine = create_engine(
-        TEST_DATABASE_URL,
-        pool_pre_ping=True,
-    )
+def test_claim_waits_for_application_row_lock():
+    assert TEST_DATABASE_URL.rsplit("/", 1)[-1] == "afterpush_test"
+
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 
     project_id = None
     application_id = None
+    deployment_id = None
 
     try:
         with Session(engine) as db:
             project = Project(
-                name=f"parallel-worker-{uuid4().hex[:8]}",
-                repository_url="https://github.com/example/test",
+                name=f"claim-lock-{uuid4().hex[:8]}",
+                repository_url="https://github.com/example/source",
             )
             db.add(project)
             db.flush()
 
             application = Application(
                 project_id=project.id,
-                name="parallel-service",
-                image="nginx",
+                name="claim-lock-api",
+                image="example/claim-lock-api",
                 port=3000,
                 replicas=2,
             )
@@ -43,10 +40,10 @@ def test_parallel_workers_process_deployment_once(tmp_path):
 
             deployment = Deployment(
                 application_id=application.id,
-                environment="staging",
-                image_tag="v1.0.0",
-                status="pending",
+                environment="dev",
+                image_tag="v1",
                 revision=1,
+                status="pending",
             )
             db.add(deployment)
             db.flush()
@@ -57,53 +54,48 @@ def test_parallel_workers_process_deployment_once(tmp_path):
 
             db.commit()
 
-        barrier = Barrier(2)
+        worker_started = Event()
+        worker_finished = Event()
 
         def worker():
             with Session(engine) as db:
-                barrier.wait(timeout=10)
+                db.execute(text("SET LOCAL lock_timeout = '5s'"))
+                worker_started.set()
 
-                return process_pending_deployments(
+                claim_id = claim_deployment(
                     db=db,
-                    gitops_root=tmp_path,
-                    limit=20,
+                    deployment_id=deployment_id,
                 )
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = [
-                executor.submit(worker)
-                for _ in range(2)
-            ]
+                db.commit()
+                worker_finished.set()
+                return claim_id
 
-            results = [
-                future.result(timeout=15)
-                for future in futures
-            ]
+        with Session(engine) as first_db:
+            first_db.execute(text("SET LOCAL lock_timeout = '5s'"))
 
-        total_applied = sum(
-            result["applied"]
-            for result in results
-        )
+            first_db.query(Application).filter(
+                Application.id == application_id
+            ).with_for_update().one()
 
-        assert total_applied == 1
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(worker)
 
-        assert sum(
-            result["errors"]
-            for result in results
-        ) == 0
+                assert worker_started.wait(timeout=5)
+                assert not worker_finished.wait(timeout=0.2)
+
+                first_db.commit()
+
+                claim_id = future.result(timeout=10)
+
+        assert claim_id is not None
+        assert worker_finished.is_set()
 
         with Session(engine) as db:
-            saved = db.get(Deployment, deployment_id)
-            assert saved.status == "running"
+            deployment = db.get(Deployment, deployment_id)
 
-        values_path = get_values_path(
-            gitops_root=tmp_path,
-            application_name="parallel-service",
-            environment="staging",
-            project_id=project_id,
-        )
-
-        assert values_path.is_file()
+            assert deployment.status == "publishing"
+            assert deployment.publication_claim_id == claim_id
 
     finally:
         try:
