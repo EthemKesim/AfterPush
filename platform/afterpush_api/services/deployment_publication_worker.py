@@ -109,3 +109,49 @@ def publish_claimed_deployment(
         raise
 
     return "published"
+
+
+def process_pending_publications(
+    db: Session,
+    gitops_repository_url: str,
+    limit: int = 20,
+) -> dict[str, int]:
+    """
+    Publish a batch of eligible pending deployments.
+
+    Each deployment is claimed and published independently.
+    A failure does not stop the remaining deployments.
+
+    This function is not yet connected to a scheduler.
+    """
+
+    from afterpush_api.services.deployment_worker import (
+        get_pending_deployment_ids,
+    )
+
+    deployment_ids = get_pending_deployment_ids(
+        db=db,
+        limit=limit,
+    )
+
+    results = {
+        "published": 0,
+        "skipped": 0,
+        "errors": 0,
+    }
+
+    for deployment_id in deployment_ids:
+        try:
+            result = publish_claimed_deployment(
+                db=db,
+                deployment_id=deployment_id,
+                gitops_repository_url=gitops_repository_url,
+            )
+
+            results[result] += 1
+
+        except Exception:
+            db.rollback()
+            results["errors"] += 1
+
+    return results
