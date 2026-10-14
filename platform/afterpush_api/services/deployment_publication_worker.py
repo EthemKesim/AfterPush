@@ -125,7 +125,7 @@ def process_pending_publications(
     This function is not yet connected to a scheduler.
     """
 
-    from afterpush_api.services.deployment_worker import (
+    from afterpush_api.services.deployment_selection import (
         get_pending_deployment_ids,
     )
 

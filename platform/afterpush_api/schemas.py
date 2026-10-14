@@ -94,10 +94,6 @@ class DeploymentCreate(BaseModel):
     )
 
 
-class DeploymentStatusUpdate(BaseModel):
-    status: Literal["pending", "running", "succeeded", "failed"]
-
-
 class DeploymentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

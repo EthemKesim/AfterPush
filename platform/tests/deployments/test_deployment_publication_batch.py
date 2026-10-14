@@ -11,7 +11,7 @@ def test_batch_publishes_eligible_deployments(db_session):
 
     with (
         patch(
-            "afterpush_api.services.deployment_worker.get_pending_deployment_ids",
+            "afterpush_api.services.deployment_selection.get_pending_deployment_ids",
             return_value=deployment_ids,
         ) as get_pending,
         patch(
@@ -39,7 +39,7 @@ def test_batch_continues_after_failure(db_session):
 
     with (
         patch(
-            "afterpush_api.services.deployment_worker.get_pending_deployment_ids",
+            "afterpush_api.services.deployment_selection.get_pending_deployment_ids",
             return_value=deployment_ids,
         ),
         patch(
