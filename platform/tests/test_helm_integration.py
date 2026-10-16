@@ -80,7 +80,10 @@ def test_helm_chart_preserves_afterpush_application_identity():
     # its existing Kubernetes identity during the GitOps handoff.
     assert "name: afterpush-api\n" in rendered
     assert "app: afterpush-api" in rendered
-    assert 'job="afterpush-api"' in rendered
+    assert (
+        'job="afterpush-api"' in rendered
+        or r'job=\"afterpush-api\"' in rendered
+    )
 
 def test_helm_templates_do_not_hardcode_environment_namespace():
     templates_path = CHART_PATH / "templates"
