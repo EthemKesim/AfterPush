@@ -3,14 +3,14 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 
 metadata:
-  name: {{ .Values.application.name }}
+  name: {{ include "afterpush.resourceName" . }}
   labels:
     release: monitoring
 
 spec:
   selector:
     matchLabels:
-      app: {{ .Values.application.name }}
+      app: {{ include "afterpush.resourceName" . }}
 
   endpoints:
     - port: http
@@ -19,5 +19,8 @@ spec:
 
       relabelings:
         - targetLabel: application
-          replacement: {{ .Values.application.name | quote }}
+          replacement: {{ include "afterpush.resourceName" . | quote }}
+
+        - targetLabel: scrape_type
+          replacement: "application"
 {{- end }}

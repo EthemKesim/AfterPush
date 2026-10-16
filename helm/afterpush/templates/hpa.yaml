@@ -1,15 +1,16 @@
+
 {{- if .Values.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 
 metadata:
-  name: {{ .Values.application.name }}
+  name: {{ include "afterpush.resourceName" . }}
 
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.application.name }}
+    name: {{ include "afterpush.resourceName" . }}
 
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}

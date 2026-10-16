@@ -3,13 +3,13 @@ apiVersion: monitoring.coreos.com/v1
 kind: Probe
 
 metadata:
-  name: {{ .Values.application.name }}-http
+  name: {{ include "afterpush.resourceName" . }}-http
   labels:
     release: monitoring
-    application: {{ .Values.application.name | quote }}
+    application: {{ include "afterpush.resourceName" . | quote }}
 
 spec:
-  jobName: {{ printf "%s-blackbox" .Values.application.name | quote }}
+  jobName: {{ printf "%s-blackbox" (include "afterpush.resourceName" .) | quote }}
 
   interval: 15s
 
@@ -21,7 +21,7 @@ spec:
   targets:
     staticConfig:
       static:
-        - {{ printf "http://%s%s" .Values.ingress.host .Values.probes.readiness.path | quote }}
+        - {{ printf "http://%s.%s.svc.cluster.local:%v%s" (include "afterpush.resourceName" .) .Release.Namespace .Values.service.port .Values.probes.readiness.path | quote }}
       labels:
-        application: {{ .Values.application.name | quote }}
+        application: {{ include "afterpush.resourceName" . | quote }}
 {{- end }}

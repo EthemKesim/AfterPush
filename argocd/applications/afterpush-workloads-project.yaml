@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: afterpush-workloads
+  namespace: argocd
+spec:
+  description: Restricted project for AfterPush managed workloads
+  sourceRepos:
+    - https://github.com/EthemKesim/AfterPush.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: ap-dev-*
+    - server: https://kubernetes.default.svc
+      namespace: ap-staging-*
+    - server: https://kubernetes.default.svc
+      namespace: ap-prod-*
+  clusterResourceWhitelist: []
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange
+    - group: ""
+      kind: Secret
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+    - group: ""
+      kind: ServiceAccount
