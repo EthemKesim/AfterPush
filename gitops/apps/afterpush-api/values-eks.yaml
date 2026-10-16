@@ -10,7 +10,7 @@ service:
   targetPort: 3000
 config:
   appEnv: eks
-  logLevel: info
+  logLevel: debug
 ingress:
   enabled: true
   className: alb
