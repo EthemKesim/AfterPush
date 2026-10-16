@@ -1,16 +1,17 @@
+
 apiVersion: v1
 kind: Service
 
 metadata:
-  name: {{ .Values.application.name }}
+  name: {{ include "afterpush.resourceName" . }}
   labels:
-    app: {{ .Values.application.name }}
+    app: {{ include "afterpush.resourceName" . }}
 
 spec:
   type: {{ .Values.service.type }}
 
   selector:
-    app: {{ .Values.application.name }}
+    app: {{ include "afterpush.resourceName" . }}
 
   ports:
     - name: http

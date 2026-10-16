@@ -1,11 +1,16 @@
-
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .Values.application.name }}
+  name: {{ include "afterpush.resourceName" . }}
   labels:
-    app: {{ .Values.application.name }}
+    app: {{ include "afterpush.resourceName" . }}
+  {{- with .Values.deployment }}
+  {{- if hasKey . "revision" }}
+  annotations:
+    afterpush.dev/revision: {{ .revision | toString | quote }}
+  {{- end }}
+  {{- end }}
 
 spec:
   {{- if not .Values.autoscaling.enabled }}
@@ -14,18 +19,23 @@ spec:
 
   selector:
     matchLabels:
-      app: {{ .Values.application.name }}
+      app: {{ include "afterpush.resourceName" . }}
 
   template:
     metadata:
       labels:
-        app: {{ .Values.application.name }}
+        app: {{ include "afterpush.resourceName" . }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.deployment }}
+        {{- if hasKey . "revision" }}
+        afterpush.dev/revision: {{ .revision | toString | quote }}
+        {{- end }}
+        {{- end }}
 
     spec:
       containers:
-        - name: {{ .Values.application.name }}
+        - name: {{ include "afterpush.resourceName" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
 
@@ -34,11 +44,11 @@ spec:
 
           envFrom:
             - configMapRef:
-                name: {{ .Values.application.name }}-config
+                name: {{ include "afterpush.resourceName" . }}-config
 
             {{- if .Values.secret.enabled }}
             - secretRef:
-                name: {{ .Values.secret.name | default (printf "%s-secret" .Values.application.name) }}
+                name: {{ .Values.secret.name | default (printf "%s-secret" (include "afterpush.resourceName" .)) }}
             {{- end }}
 
           readinessProbe:
