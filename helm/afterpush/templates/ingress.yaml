@@ -1,9 +1,10 @@
+
 {{- if .Values.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 
 metadata:
-  name: {{ .Values.application.name }}
+  name: {{ include "afterpush.resourceName" . }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -23,7 +24,7 @@ spec:
             pathType: {{ .Values.ingress.pathType }}
             backend:
               service:
-                name: {{ .Values.application.name }}
+                name: {{ include "afterpush.resourceName" . }}
                 port:
                   number: {{ .Values.service.port }}
 {{- end }}

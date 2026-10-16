@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: afterpush-workloads
+  namespace: argocd
+spec:
+  description: Restricted project for AfterPush managed workloads
+  sourceRepos:
+  - https://github.com/EthemKesim/AfterPush.git
+  destinations:
+  - server: https://kubernetes.default.svc
+    namespace: ap-dev-*
+  - server: https://kubernetes.default.svc
+    namespace: ap-staging-*
+  - server: https://kubernetes.default.svc
+    namespace: ap-prod-*
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: ConfigMap
+  - group: ''
+    kind: Service
+  - group: apps
+    kind: Deployment
+  - group: autoscaling
+    kind: HorizontalPodAutoscaler
+  - group: networking.k8s.io
+    kind: Ingress
+  - group: monitoring.coreos.com
+    kind: ServiceMonitor
+  - group: monitoring.coreos.com
+    kind: PrometheusRule

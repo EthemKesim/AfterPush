@@ -1,14 +1,16 @@
+
 {{- if .Values.monitoring.enabled }}
+{{- $resourceName := include "afterpush.resourceName" . }}
 apiVersion: v1
 kind: ConfigMap
 
 metadata:
-  name: {{ .Values.application.name }}-grafana-dashboard
+  name: {{ $resourceName }}-grafana-dashboard
   labels:
     grafana_dashboard: "1"
 
 data:
-  {{ .Values.application.name }}-dashboard.json: |
+  {{ $resourceName }}-dashboard.json: |
     {
       "annotations": {
         "list": []
@@ -28,7 +30,7 @@ data:
           },
           "targets": [
             {
-             "expr": "sum(up{namespace=\"{{ .Values.environment.namespace }}\", job=\"{{ .Values.application.name }}\"})",
+              "expr": "sum(up{namespace=\"{{ .Release.Namespace }}\", job=\"{{ $resourceName }}\"})",
               "refId": "A"
             }
           ],
@@ -59,7 +61,7 @@ data:
           },
           "targets": [
             {
-              "expr": "100 * ((sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",status_code=~\"5..\",route!=\"/health\"}[5m])) or vector(0)) / sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m])))",
+              "expr": "100 * ((sum(rate(afterpush_http_requests_total{application=\"{{ $resourceName }}\",status_code=~\"5..\",route!=\"/health\"}[5m])) or vector(0)) / sum(rate(afterpush_http_requests_total{application=\"{{ $resourceName }}\",route!=\"/health\"}[5m])))",
               "refId": "A"
             }
           ],
@@ -90,7 +92,7 @@ data:
           },
           "targets": [
             {
-              "expr": "histogram_quantile(0.95, sum by (le) (rate(afterpush_http_request_duration_seconds_bucket{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m])))",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(afterpush_http_request_duration_seconds_bucket{application=\"{{ $resourceName }}\",route!=\"/health\"}[5m])))",
               "refId": "A"
             }
           ],
@@ -121,7 +123,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(afterpush_http_requests_total{application=\"{{ .Values.application.name }}\",route!=\"/health\"}[5m]))",
+              "expr": "sum(rate(afterpush_http_requests_total{application=\"{{ $resourceName }}\",route!=\"/health\"}[5m]))",
               "legendFormat": "AfterPush RPS",
               "refId": "A"
             }
@@ -155,7 +157,7 @@ data:
           },
           "targets": [
             {
-              "expr": "100 * (1 - afterpush:slo_error_rate:5m{application=\"{{ .Values.application.name }}\"})",
+              "expr": "100 * (1 - afterpush:slo_error_rate:5m{application=\"{{ $resourceName }}\"})",
               "refId": "A"
             }
           ],
@@ -203,12 +205,12 @@ data:
           },
           "targets": [
             {
-              "expr": "afterpush:slo_burn_rate:5m{application=\"{{ .Values.application.name }}\"}",
+              "expr": "afterpush:slo_burn_rate:5m{application=\"{{ $resourceName }}\"}",
               "legendFormat": "5m burn rate",
               "refId": "A"
             },
             {
-              "expr": "afterpush:slo_burn_rate:1h{application=\"{{ .Values.application.name }}\"}",
+              "expr": "afterpush:slo_burn_rate:1h{application=\"{{ $resourceName }}\"}",
               "legendFormat": "1h burn rate",
               "refId": "B"
             }
@@ -244,12 +246,12 @@ data:
           },
           "targets": [
             {
-              "expr": "afterpush:slo_burn_rate:30m{application=\"{{ .Values.application.name }}\"}",
+              "expr": "afterpush:slo_burn_rate:30m{application=\"{{ $resourceName }}\"}",
               "legendFormat": "30m burn rate",
               "refId": "A"
             },
             {
-              "expr": "afterpush:slo_burn_rate:6h{application=\"{{ .Values.application.name }}\"}",
+              "expr": "afterpush:slo_burn_rate:6h{application=\"{{ $resourceName }}\"}",
               "legendFormat": "6h burn rate",
               "refId": "B"
             }
@@ -285,8 +287,8 @@ data:
           },
           "targets": [
             {
-              "expr": "probe_success{namespace=\"{{ .Values.environment.namespace }}\",job=\"{{ .Values.application.name }}-blackbox\",application=\"{{ .Values.application.name }}\"}",
-              "legendFormat": "{{ .Values.application.name }} availability",
+              "expr": "probe_success{namespace=\"{{ .Release.Namespace }}\",job=\"{{ $resourceName }}-blackbox\",application=\"{{ $resourceName }}\"}",
+              "legendFormat": "{{ $resourceName }} availability",
               "refId": "A"
             }
           ],
@@ -356,8 +358,8 @@ data:
         "to": "now"
       },
       "timezone": "browser",
-      "title": "AfterPush - {{ .Values.application.name }} Observability",
-      "uid": "afterpush-{{ .Values.application.name }}",
+      "title": "AfterPush - {{ $resourceName }} Observability",
+      "uid": "afterpush-{{ $resourceName }}",
       "version": 4
     }
 {{- end }}
