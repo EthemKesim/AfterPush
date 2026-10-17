@@ -1,4 +1,5 @@
 
+from time import perf_counter
 from typing import Any
 from uuid import UUID
 
@@ -6,20 +7,30 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 
 from afterpush_api.database import SessionLocal
 from afterpush_api.models import Application, Deployment, Project
+from afterpush_api.metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS,
+    metrics_response,
+)
 from afterpush_api.schemas import (
     ApplicationCreate,
     ApplicationResponse,
     ApplicationUpdate,
     DeploymentCreate,
+    DeploymentPromotionCreate,
     DeploymentResponse,
-    DeploymentStatusUpdate,
     ProjectCreate,
     ProjectResponse,
 )
 from afterpush_api.services.deployment_revision import (
+    DeploymentPromotionNotFound,
+    DeploymentPromotionRejected,
+    approve_production_promotion,
+    create_promoted_deployment,
     create_versioned_deployment,
 )
 from afterpush_engine.generation import generate_helm_values
@@ -38,6 +49,36 @@ app = FastAPI(
     description="Self-service deployment platform API",
     version="0.1.0",
 )
+
+
+@app.middleware("http")
+async def record_http_metrics(request: Request, call_next):
+    """Record stable route templates without counting Prometheus scrapes."""
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started_at = perf_counter()
+    status_code = "500"
+    route_path = "unmatched"
+
+    try:
+        response = await call_next(request)
+        status_code = str(response.status_code)
+        route = request.scope.get("route")
+        route_path = getattr(route, "path", None) or "unmatched"
+        return response
+    finally:
+        elapsed_seconds = perf_counter() - started_at
+        HTTP_REQUESTS.labels(
+            method=request.method,
+            route=route_path,
+            status_code=status_code,
+        ).inc()
+        HTTP_REQUEST_DURATION_SECONDS.labels(
+            method=request.method,
+            route=route_path,
+            status_code=status_code,
+        ).observe(elapsed_seconds)
 
 
 # =========================================================
@@ -71,6 +112,11 @@ def health_check():
         "status": "ok",
         "service": "afterpush-platform-api",
     }
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics():
+    return metrics_response()
 
 
 # =========================================================
@@ -376,6 +422,15 @@ def create_deployment(
     db: Session = Depends(get_db),
 ):
     try:
+        if deployment.environment != "dev":
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Create deployments in dev first. Use the promotion "
+                    "endpoint for staging and prod."
+                ),
+            )
+
         new_deployment = create_versioned_deployment(
             db=db,
             application_id=application_id,
@@ -394,6 +449,71 @@ def create_deployment(
 
         return new_deployment
 
+    except Exception:
+        db.rollback()
+        raise
+
+
+@app.post(
+    "/api/v1/deployments/{deployment_id}/promote",
+    response_model=DeploymentResponse,
+    status_code=201,
+    responses={
+        404: {"description": "Source deployment not found"},
+        409: {"description": "Promotion readiness gate rejected"},
+    },
+)
+def promote_deployment(
+    deployment_id: UUID,
+    promotion: DeploymentPromotionCreate,
+    db: Session = Depends(get_db),
+):
+    try:
+        new_deployment = create_promoted_deployment(
+            db,
+            source_deployment_id=deployment_id,
+            target_environment=promotion.target_environment,
+        )
+        db.commit()
+        db.refresh(new_deployment)
+        return new_deployment
+    except DeploymentPromotionNotFound:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    except DeploymentPromotionRejected as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error))
+    except Exception:
+        db.rollback()
+        raise
+
+
+@app.post(
+    "/api/v1/deployments/{deployment_id}/approve",
+    response_model=DeploymentResponse,
+    responses={
+        404: {"description": "Deployment not found"},
+        409: {"description": "Production approval rejected"},
+    },
+)
+def approve_deployment(
+    deployment_id: UUID,
+    db: Session = Depends(get_db),
+):
+    try:
+        deployment = approve_production_promotion(
+            db,
+            deployment_id=deployment_id,
+        )
+        db.commit()
+        db.refresh(deployment)
+        return deployment
+    except DeploymentPromotionNotFound:
+        db.rollback()
+        raise HTTPException(status_code=404, detail="Deployment not found")
+    except DeploymentPromotionRejected as error:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(error))
     except Exception:
         db.rollback()
         raise
@@ -433,6 +553,54 @@ def list_deployments(
 
 
 @app.get(
+    "/api/v1/applications/{application_id}/deployment-timeline",
+    response_model=list[DeploymentResponse],
+    responses={404: {"description": "Application not found"}},
+)
+def get_deployment_timeline(
+    application_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Return chronological deployment history and promotion links."""
+    application = db.get(Application, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    deployments = (
+        db.query(Deployment)
+        .filter(Deployment.application_id == application_id)
+        .order_by(Deployment.created_at.asc(), Deployment.id.asc())
+        .all()
+    )
+
+    # Database timestamps may have the same resolution for a source and its
+    # immediate promotion. Preserve chronology while ensuring a source is
+    # always displayed before the deployment that copied it.
+    ordered: list[Deployment] = []
+    remaining = list(deployments)
+    ordered_ids = set()
+    while remaining:
+        ready = [
+            deployment
+            for deployment in remaining
+            if (
+                deployment.promotion_source_deployment_id is None
+                or deployment.promotion_source_deployment_id in ordered_ids
+            )
+        ]
+        if not ready:
+            # A historical broken link should not make the timeline unusable.
+            ready = [remaining[0]]
+
+        for deployment in ready:
+            ordered.append(deployment)
+            ordered_ids.add(deployment.id)
+            remaining.remove(deployment)
+
+    return ordered
+
+
+@app.get(
     "/api/v1/deployments/{deployment_id}",
     response_model=DeploymentResponse,
     responses={
@@ -451,52 +619,5 @@ def get_deployment(
             status_code=404,
             detail="Deployment not found",
         )
-
-    return deployment
-
-
-@app.patch(
-    "/api/v1/deployments/{deployment_id}/status",
-    response_model=DeploymentResponse,
-    responses={
-        404: {"description": "Deployment not found"},
-        409: {"description": "Invalid deployment status transition"},
-        422: {"description": "Invalid deployment ID or status"},
-    },
-)
-def update_deployment_status(
-    deployment_id: UUID,
-    update: DeploymentStatusUpdate,
-    db: Session = Depends(get_db),
-):
-    allowed_transitions = {
-        "pending": {"running"},
-        "running": {"succeeded", "failed"},
-        "succeeded": set(),
-        "failed": set(),
-    }
-
-    deployment = (
-        db.query(Deployment)
-        .filter(Deployment.id == deployment_id)
-        .with_for_update()
-        .one_or_none()
-    )
-
-    if deployment is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Deployment not found",
-        )
-
-    if update.status not in allowed_transitions.get(deployment.status, set()):
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cannot transition deployment from {deployment.status} to {update.status}",
-        )
-
-    deployment.status = update.status
-    db.commit()
-    db.refresh(deployment)
 
     return deployment

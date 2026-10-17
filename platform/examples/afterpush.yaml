@@ -11,7 +11,7 @@ spec:
     repository: afterpush-api
     tag: metrics
 
-  port: 3000
+  port: 8000
 
   health:
     path: /health
@@ -28,3 +28,7 @@ spec:
 
   monitoring:
     enabled: true
+
+  security:
+    automountServiceAccountToken: false
+    readOnlyRootFilesystem: true

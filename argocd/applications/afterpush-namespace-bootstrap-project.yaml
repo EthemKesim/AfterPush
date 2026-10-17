@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: afterpush-namespace-bootstrap
+  namespace: argocd
+spec:
+  description: Restricted namespace bootstrap for AfterPush projects
+  sourceRepos:
+  - https://github.com/EthemKesim/AfterPush.git
+  destinations:
+  - server: https://kubernetes.default.svc
+    namespace: ap-dev-*
+  - server: https://kubernetes.default.svc
+    namespace: ap-staging-*
+  - server: https://kubernetes.default.svc
+    namespace: ap-prod-*
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  namespaceResourceWhitelist:
+  - group: ''
+    kind: ResourceQuota
+  - group: ''
+    kind: LimitRange

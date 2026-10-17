@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ebs-test-pvc
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ebs-test-pod
+  namespace: default
+spec:
+  restartPolicy: Never
+  containers:
+    - name: busybox
+      image: busybox:1.36
+      command:
+        - sh
+        - -c
+        - |
+          echo "AfterPush EBS persistence test" > /data/test.txt
+          sleep 3600
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+      volumeMounts:
+        - name: test-storage
+          mountPath: /data
+  volumes:
+    - name: test-storage
+      persistentVolumeClaim:
+        claimName: ebs-test-pvc

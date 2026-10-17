@@ -1,0 +1,29 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "afterpush.resourceName" . }}-ingress
+  labels:
+    app: {{ include "afterpush.resourceName" . }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "afterpush.resourceName" . }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort }}
+    {{- range .Values.networkPolicy.allowedIngressNamespaces }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . | quote }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.service.targetPort }}
+    {{- end }}
+{{- end }}

@@ -24,6 +24,17 @@ SAFE_NAME_PATTERN = re.compile(
     r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
 )
 
+MAX_KUBERNETES_NAMESPACE_LENGTH = 63
+PROJECT_NAMESPACE_PREFIX = "ap-"
+PROJECT_ID_LENGTH = 36
+
+MAX_PROJECT_ENVIRONMENT_LENGTH = (
+    MAX_KUBERNETES_NAMESPACE_LENGTH
+    - len(PROJECT_NAMESPACE_PREFIX)
+    - 1
+    - PROJECT_ID_LENGTH
+)
+
 
 def validate_name(name: str) -> None:
     if (
@@ -39,6 +50,31 @@ def validate_project_id(project_id: UUID | None) -> None:
     if project_id is not None and not isinstance(project_id, UUID):
         raise InvalidGitOpsPathError(
             "GitOps project_id must be a UUID."
+        )
+
+
+def validate_project_environment(
+    environment: str,
+    project_id: UUID | None,
+) -> None:
+    """
+    Ensure project-aware environments produce valid
+    Kubernetes namespace names.
+    """
+
+    validate_name(environment)
+    validate_project_id(project_id)
+
+    if project_id is None:
+        return
+
+    namespace = f"{PROJECT_NAMESPACE_PREFIX}{environment}-{project_id}"
+
+    if len(namespace) > MAX_KUBERNETES_NAMESPACE_LENGTH:
+        raise InvalidGitOpsPathError(
+            "Project environment name is too long. "
+            f"Maximum length is {MAX_PROJECT_ENVIRONMENT_LENGTH} "
+            "characters."
         )
 
 
@@ -58,8 +94,7 @@ def get_values_path(
     """
 
     validate_name(application_name)
-    validate_name(environment)
-    validate_project_id(project_id)
+    validate_project_environment(environment, project_id)
 
     root = Path(gitops_root)
     apps_directory = root / "apps"

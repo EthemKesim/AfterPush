@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: afterpush-gitops-recovery
+  namespace: afterpush-system
+  labels:
+    app.kubernetes.io/name: afterpush
+    app.kubernetes.io/component: gitops-recovery
+spec:
+  schedule: "*/10 * * * *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 180
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: afterpush-gitops-recovery
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: recovery-worker
+              image: REPLACE_WORKER_IMAGE
+              imagePullPolicy: IfNotPresent
+              command:
+                - python
+                - -m
+                - afterpush_api.workers.gitops_recovery
+              args:
+                - --timeout-minutes
+                - "15"
+                - --limit
+                - "100"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: afterpush-api-db
+                      key: DATABASE_URL
+                - name: AFTERPUSH_GITOPS_REPOSITORY_URL
+                  valueFrom:
+                    configMapKeyRef:
+                      name: afterpush-gitops-worker-config
+                      key: AFTERPUSH_GITOPS_REPOSITORY_URL
+                - name: AFTERPUSH_GITOPS_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: afterpush-gitops-credentials
+                      key: AFTERPUSH_GITOPS_USERNAME
+                - name: AFTERPUSH_GITOPS_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: afterpush-gitops-credentials
+                      key: AFTERPUSH_GITOPS_TOKEN
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]

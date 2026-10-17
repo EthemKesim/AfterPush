@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: afterpush-runtime-worker-config
+  namespace: afterpush-system
+data:
+  # Repository identity is used to verify the Argo CD Application source.
+  # This worker never clones or pushes this repository.
+  AFTERPUSH_GITOPS_REPOSITORY_URL: https://github.com/ORG/afterpush-gitops.git

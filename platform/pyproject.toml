@@ -13,9 +13,11 @@ dependencies = [
     "jsonschema",
     "fastapi",
     "uvicorn[standard]",
+    "prometheus-client>=0.20,<1",
     "sqlalchemy>=2.0,<3.0",
     "psycopg[binary]>=3.2,<4.0",
     "alembic>=1.14,<2.0",
+    "kubernetes>=30,<36",
 ]
 
 [project.optional-dependencies]

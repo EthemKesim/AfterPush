@@ -1,4 +1,6 @@
 
+import hashlib
+import re
 from pathlib import Path
 from uuid import UUID
 
@@ -14,6 +16,57 @@ class GitOpsBootstrapError(GitOpsError):
     """Raised when a GitOps application cannot be initialized."""
 
 
+MAX_RESOURCE_NAME_LENGTH = 45
+RESOURCE_HASH_LENGTH = 12
+
+
+def build_resource_name(
+    application_name: str,
+    project_id: UUID,
+) -> str:
+    """
+    Build a stable, project-aware Kubernetes resource name.
+
+    The hash includes both the project UUID and the complete
+    application name to distinguish applications within a project.
+    """
+
+    if not application_name:
+        raise GitOpsBootstrapError(
+            "Application name cannot be empty."
+        )
+
+    normalized_name = re.sub(
+        r"[^a-z0-9-]+",
+        "-",
+        application_name.lower(),
+    ).strip("-")
+
+    if not normalized_name:
+        raise GitOpsBootstrapError(
+            "Application name cannot produce a valid Kubernetes resource name."
+        )
+
+    identity = f"{project_id}:{application_name}"
+
+    identity_hash = hashlib.sha256(
+        identity.encode("utf-8")
+    ).hexdigest()[:RESOURCE_HASH_LENGTH]
+
+    available_prefix_length = (
+        MAX_RESOURCE_NAME_LENGTH - RESOURCE_HASH_LENGTH - 1
+    )
+
+    prefix = normalized_name[:available_prefix_length].rstrip("-")
+
+    if not prefix:
+        raise GitOpsBootstrapError(
+            "Application name cannot produce a valid Kubernetes resource name."
+        )
+
+    return f"{prefix}-{identity_hash}"
+
+
 def build_initial_values(
     application_name: str,
     image_repository: str,
@@ -21,6 +74,7 @@ def build_initial_values(
     port: int,
     replicas: int,
     environment: str,
+    project_id: UUID | None = None,
 ) -> dict:
     """
     Build initial Helm values for an application.
@@ -36,10 +90,18 @@ def build_initial_values(
             "Application replicas must be at least 1."
         )
 
+    application_values = {
+        "name": application_name,
+    }
+
+    if project_id is not None:
+        application_values["resourceName"] = build_resource_name(
+            application_name,
+            project_id,
+        )
+
     return {
-        "application": {
-            "name": application_name,
-        },
+        "application": application_values,
         "environment": {
             "name": environment,
         },
@@ -117,8 +179,8 @@ def bootstrap_gitops_application(
     """
     Create initial GitOps values for a new application.
 
-    When project_id is supplied, the values file is stored
-    under the project's UUID directory.
+    Project-aware applications receive a stable Kubernetes
+    resource name based on their project UUID and app name.
 
     Existing values files are never overwritten.
     """
@@ -137,6 +199,7 @@ def bootstrap_gitops_application(
         port=port,
         replicas=replicas,
         environment=environment,
+        project_id=project_id,
     )
 
     values_path.parent.mkdir(

@@ -1,3 +1,4 @@
+
 crds:
   enabled: false
 
@@ -12,6 +13,16 @@ prometheus:
 
   prometheusSpec:
     retention: 2d
+
+    # Discover ServiceMonitors across namespaces.
+    serviceMonitorNamespaceSelector: {}
+    serviceMonitorSelector: {}
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+    # Discover Probes across namespaces.
+    probeNamespaceSelector: {}
+    probeSelector: {}
+    probeSelectorNilUsesHelmValues: false
 
 alertmanager:
   enabled: true

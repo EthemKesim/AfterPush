@@ -15,8 +15,8 @@ jobs:
   # APPLICATION CI
   # =========================================================
 
-  build:
-    name: Build and Validate
+  legacy-application:
+    name: Legacy Demo Application Validate
     runs-on: ubuntu-latest
 
     defaults:
@@ -194,6 +194,74 @@ jobs:
 
       - name: Run platform tests
         run: python -m pytest platform/tests -v
+
+      - name: Build platform API image
+        run: |
+          docker build \
+            --file platform/Dockerfile.api \
+            --tag afterpush-platform-api:ci \
+            platform
+
+      - name: Scan platform API image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: afterpush-platform-api:ci
+          scan-type: image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+
+      - name: Verify platform API container health
+        run: |
+          docker run -d \
+            --name afterpush-platform-api-test \
+            -p 8000:8000 \
+            afterpush-platform-api:ci
+
+          for i in {1..10}; do
+            if curl --fail http://localhost:8000/health; then
+              break
+            fi
+            sleep 2
+
+            if [ "$i" -eq 10 ]; then
+              docker logs afterpush-platform-api-test
+              exit 1
+            fi
+          done
+
+          curl --fail --silent http://localhost:8000/metrics \
+            | grep -q '^# HELP afterpush_http_requests_total'
+
+      - name: Stop platform API container
+        if: always()
+        run: docker rm -f afterpush-platform-api-test
+
+      - name: Build runtime reconciliation worker image
+        run: |
+          docker build \
+            --file platform/Dockerfile.runtime-worker \
+            --tag afterpush-runtime-worker:ci \
+            platform
+
+      - name: Verify runtime worker command contract
+        run: |
+          docker run --rm \
+            --entrypoint python \
+            afterpush-runtime-worker:ci \
+            -m afterpush_api.workers.deployment_runtime_reconciliation \
+            --help
+
+      - name: Scan runtime worker image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: afterpush-runtime-worker:ci
+          scan-type: image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
 
       - name: Verify generated GitOps values
         run: |

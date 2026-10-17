@@ -94,8 +94,8 @@ class DeploymentCreate(BaseModel):
     )
 
 
-class DeploymentStatusUpdate(BaseModel):
-    status: Literal["pending", "running", "succeeded", "failed"]
+class DeploymentPromotionCreate(BaseModel):
+    target_environment: Literal["staging", "prod"]
 
 
 class DeploymentResponse(BaseModel):
@@ -103,8 +103,16 @@ class DeploymentResponse(BaseModel):
 
     id: UUID
     application_id: UUID
+    promotion_source_deployment_id: UUID | None
     environment: str
+    image_repository: str
     image_tag: str
+    port: int
+    replicas: int
     status: str
     revision: int
     created_at: datetime
+    runtime_status: str
+    runtime_reason: str | None
+    runtime_checked_at: datetime | None
+    approved_at: datetime | None

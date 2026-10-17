@@ -34,10 +34,23 @@ spec:
         {{- end }}
 
     spec:
+      serviceAccountName: {{ include "afterpush.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: {{ include "afterpush.resourceName" . }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: {{ .Values.containerSecurity.readOnlyRootFilesystem }}
+            capabilities:
+              drop:
+                - ALL
 
           ports:
             - containerPort: {{ .Values.service.targetPort }}

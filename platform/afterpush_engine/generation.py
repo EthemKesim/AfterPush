@@ -6,6 +6,7 @@ def generate_helm_values(config: dict) -> dict:
     ingress = spec.get("ingress", {"enabled": False})
     scaling = spec.get("scaling", {"enabled": False})
     monitoring = spec.get("monitoring", {"enabled": False})
+    security = spec.get("security")
 
     profiles = {
         "local": {
@@ -99,5 +100,22 @@ def generate_helm_values(config: dict) -> dict:
             "enabled": monitoring.get("enabled", False),
         },
     }
+
+    # Only render this opt-in block when the application specification
+    # explicitly owns these pod-security settings. Existing application
+    # specifications continue to use the Helm chart defaults.
+    if security is not None:
+        values["serviceAccount"] = {
+            "automountServiceAccountToken": security.get(
+                "automountServiceAccountToken",
+                False,
+            ),
+        }
+        values["containerSecurity"] = {
+            "readOnlyRootFilesystem": security.get(
+                "readOnlyRootFilesystem",
+                False,
+            ),
+        }
 
     return values

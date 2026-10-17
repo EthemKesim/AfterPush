@@ -1,4 +1,3 @@
-
 import uuid
 from datetime import datetime
 
@@ -133,6 +132,12 @@ class Deployment(Base):
         index=True,
     )
 
+    promotion_source_deployment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("deployments.id"),
+        nullable=True,
+        index=True,
+    )
+
     environment: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
@@ -140,6 +145,21 @@ class Deployment(Base):
 
     image_tag: Mapped[str] = mapped_column(
         String(100),
+        nullable=False,
+    )
+
+    image_repository: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+
+    port: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    replicas: Mapped[int] = mapped_column(
+        Integer,
         nullable=False,
     )
 
@@ -154,6 +174,52 @@ class Deployment(Base):
         nullable=False,
     )
 
+    publication_claim_id: Mapped[uuid.UUID | None] = mapped_column(
+        nullable=True,
+    )
+
+    publication_claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    publication_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    publication_retry_after: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    published_commit_sha: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
+    runtime_status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="unverified",
+        server_default="unverified",
+    )
+
+    runtime_reason: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    runtime_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -162,4 +228,9 @@ class Deployment(Base):
 
     application: Mapped["Application"] = relationship(
         back_populates="deployments",
+    )
+
+    promotion_source: Mapped["Deployment | None"] = relationship(
+        foreign_keys=[promotion_source_deployment_id],
+        remote_side="Deployment.id",
     )

@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: afterpush-api-eks
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/EthemKesim/AfterPush.git
+      targetRevision: feat/eks-gitops-validation
+      path: helm/afterpush
+      helm:
+        releaseName: afterpush-api
+        valueFiles:
+          - $values/gitops/apps/afterpush-api/values-eks.yaml
+    - repoURL: https://github.com/EthemKesim/AfterPush.git
+      targetRevision: feat/eks-gitops-validation
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: afterpush-dev
