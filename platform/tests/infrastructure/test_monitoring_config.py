@@ -74,4 +74,3 @@ def test_monitoring_components_are_enabled():
     assert values["prometheus"]["enabled"] is True
     assert values["grafana"]["enabled"] is True
     assert values["alertmanager"]["enabled"] is True
-
