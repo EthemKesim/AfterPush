@@ -332,6 +332,11 @@ def test_rbac_publication_updates_outdated_manifests(tmp_path):
 
     checkout = tmp_path / "checkout"
     git("clone", "--branch", "main", remote, checkout)
+    git("-C", checkout, "config", "user.name", "AfterPush Test")
+    git(
+        "-C", checkout,
+        "config", "user.email", "test@afterpush.local",
+    )
 
     deployment_path = (
         checkout

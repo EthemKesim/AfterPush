@@ -162,6 +162,13 @@ def test_rejects_conflicting_existing_policy(
         gitops_remote,
         tmp_path / "conflicting-checkout",
     )
+    git("config", "user.name", "AfterPush Test", cwd=checkout)
+    git(
+        "config",
+        "user.email",
+        "test@afterpush.local",
+        cwd=checkout,
+    )
 
     manifest = bootstrap_path(checkout)
     manifest.parent.mkdir(parents=True, exist_ok=True)

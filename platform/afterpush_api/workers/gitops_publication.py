@@ -9,10 +9,16 @@ from afterpush_api.database import SessionLocal
 
 
 def create_publication_core_api():
-    if os.getenv("KUBERNETES_SERVICE_HOST"):
-        config.load_incluster_config()
-    else:
-        config.load_kube_config()
+    try:
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
+            config.load_incluster_config()
+        else:
+            config.load_kube_config()
+    except config.ConfigException:
+        # A missing local kubeconfig means the namespace gate cannot be
+        # verified yet. Let the publication worker record a deferred attempt
+        # instead of turning an expected readiness state into a batch error.
+        return None
 
     return client.CoreV1Api()
 from afterpush_api.services.deployment_publication_worker import (
