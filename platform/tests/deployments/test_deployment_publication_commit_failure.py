@@ -100,10 +100,24 @@ def test_recovery_after_publication_completion_commit_failure(tmp_path):
 
                 return original_commit()
 
-            with patch.object(
-                db,
-                "commit",
-                side_effect=fail_second_commit,
+            with (
+                patch.object(
+                    db,
+                    "commit",
+                    side_effect=fail_second_commit,
+                ),
+                patch(
+                    "afterpush_api.services."
+                    "deployment_publication_worker."
+                    "check_deployment_namespace",
+                    return_value="verified-test-namespace",
+                ),
+                patch(
+                    "afterpush_api.services."
+                    "deployment_publication_worker."
+                    "verify_gitops_rbac",
+                    return_value=None,
+                ),
             ):
                 with pytest.raises(
                     RuntimeError,
@@ -113,6 +127,7 @@ def test_recovery_after_publication_completion_commit_failure(tmp_path):
                         db=db,
                         deployment_id=deployment_id,
                         gitops_repository_url=str(remote),
+                        core_api=object(),
                     )
 
             assert commit_count == 2

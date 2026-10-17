@@ -93,14 +93,15 @@ def recover_published_deployment(
         return "not_found"
 
     claim_id = deployment.publication_claim_id
+    spec_application_id = deployment.application_id
 
     spec = DeploymentGitOpsSpec(
         application_name=application.name,
         environment=deployment.environment,
-        image_repository=application.image,
+        image_repository=deployment.image_repository,
         image_tag=deployment.image_tag,
-        port=application.port,
-        replicas=application.replicas,
+        port=deployment.port,
+        replicas=deployment.replicas,
         project_id=application.project_id,
         revision=deployment.revision,
     )
@@ -115,6 +116,52 @@ def recover_published_deployment(
 
     if not verification.matches or not verification.commit_sha:
         return "not_published"
+
+    # Serialize the final recovery decision with revision creation.
+    application = (
+        db.query(Application)
+        .filter(Application.id == spec_application_id)
+        .with_for_update()
+        .one_or_none()
+    )
+
+    if application is None:
+        db.rollback()
+        return "not_found"
+
+    deployment = db.execute(
+        select(Deployment)
+        .where(Deployment.id == deployment_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+    if deployment is None:
+        db.rollback()
+        return "claim_changed"
+
+    if (
+        deployment.status != "publishing"
+        or deployment.publication_claim_id != claim_id
+        or deployment.publication_claimed_at is None
+        or deployment.publication_claimed_at > cutoff
+    ):
+        db.rollback()
+        return "claim_changed"
+
+    newer_revision = db.execute(
+        select(Deployment.id)
+        .where(
+            Deployment.application_id == deployment.application_id,
+            Deployment.environment == deployment.environment,
+            Deployment.revision > deployment.revision,
+        )
+        .limit(1)
+    ).first()
+
+    if newer_revision is not None:
+        db.rollback()
+        return "superseded"
 
     completed = complete_deployment_publication(
         db=db,

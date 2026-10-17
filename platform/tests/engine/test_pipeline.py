@@ -25,7 +25,7 @@ def test_pipeline_generates_values_for_valid_config():
 )
 
     assert values["application"]["name"] == "afterpush-api"
-    assert values["service"]["targetPort"] == 3000
+    assert values["service"]["targetPort"] == 8000
     assert values["probes"]["readiness"]["path"] == "/health"
 
 

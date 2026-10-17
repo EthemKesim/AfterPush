@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: afterpush-runtime-test
+  namespace: afterpush-system
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      serviceAccountName: afterpush-runtime-worker
+      automountServiceAccountToken: true
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: runtime-worker
+          image: REPLACE_WORKER_IMAGE
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - afterpush_api.workers.deployment_runtime_reconciliation
+            - --in-cluster
+            - --limit
+            - "20"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: afterpush-api-db
+                  key: DATABASE_URL
+            - name: AFTERPUSH_GITOPS_REPOSITORY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: afterpush-runtime-worker-config
+                  key: AFTERPUSH_GITOPS_REPOSITORY_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: temporary-files
+              mountPath: /tmp
+      volumes:
+        - name: temporary-files
+          emptyDir: {}

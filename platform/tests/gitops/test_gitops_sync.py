@@ -41,6 +41,8 @@ def test_sync_updates_existing_application(application_data):
     updated_data = {
         **application_data,
         "image_tag": "v2.0.0",
+        "port": 8080,
+        "replicas": 3,
     }
 
     sync_gitops_application(**updated_data)
@@ -50,6 +52,8 @@ def test_sync_updates_existing_application(application_data):
     )
 
     assert values["image"]["tag"] == "v2.0.0"
+    assert values["service"]["targetPort"] == 8080
+    assert values["replicaCount"] == 3
 
 
 def test_sync_preserves_existing_settings(application_data):

@@ -1,5 +1,16 @@
 import subprocess
 from pathlib import Path
+from typing import Callable
+from uuid import UUID
+
+from afterpush_api.services.namespace_bootstrap_validator import (
+    validate_namespace_bootstrap,
+)
+
+from afterpush_api.services.gitops_publication_path import (
+    GitOpsPublicationPathError,
+    validate_gitops_publication_path,
+)
 
 
 class GitOpsPublishError(Exception):
@@ -32,6 +43,7 @@ def publish_gitops_file(
     repository_root: Path,
     values_path: Path,
     commit_message: str,
+    validate_content: Callable[[Path], None] | None = None,
 ) -> str | None:
     """
     Commit one GitOps values file in an isolated repository.
@@ -55,22 +67,41 @@ def publish_gitops_file(
             "GitOps values file is outside the repository."
         ) from exc
 
-    parts = relative_path.parts
-
-    if (
-        len(parts) != 6
-        or parts[0] != "gitops"
-        or parts[1] != "apps"
-        or parts[-1] != "values.yaml"
-    ):
+    try:
+        publication_kind = validate_gitops_publication_path(relative_path)
+    except GitOpsPublicationPathError as exc:
         raise GitOpsPublishError(
-            "Only project-scoped GitOps values.yaml files can be published."
-        )
+            f"Invalid GitOps publication path: {exc}"
+        ) from exc
 
     if not values_path.is_file():
         raise GitOpsPublishError(
             "GitOps values file does not exist."
         )
+
+    if publication_kind == "namespace-bootstrap":
+        try:
+            parts = relative_path.parts
+            environment = parts[3]
+            project_id = UUID(parts[4])
+
+            validate_namespace_bootstrap(
+                rendered_yaml=values_path.read_text(encoding="utf-8"),
+                project_id=project_id,
+                environment=environment,
+            )
+        except Exception as exc:
+            raise GitOpsPublishError(
+                f"Namespace bootstrap security validation failed: {exc}"
+            ) from exc
+
+    if validate_content is not None:
+        try:
+            validate_content(values_path)
+        except Exception as exc:
+            raise GitOpsPublishError(
+                f"GitOps content validation failed: {exc}"
+            ) from exc
 
     actual_root = Path(
         run_git(repository_root, "rev-parse", "--show-toplevel")

@@ -22,7 +22,7 @@ def git(*args, cwd=None):
     ).stdout.strip()
 
 
-def test_cli_publishes_deployment_end_to_end(tmp_path):
+def test_cli_defers_unready_namespace(tmp_path):
     assert TEST_DATABASE_URL.rsplit("/", 1)[-1] == "afterpush_test"
 
     remote = tmp_path / "gitops.git"
@@ -88,6 +88,7 @@ def test_cli_publishes_deployment_end_to_end(tmp_path):
                 "afterpush_api.workers.gitops_publication",
                 "--limit",
                 "1",
+                "--execute",
             ],
             env=env,
             capture_output=True,
@@ -99,25 +100,23 @@ def test_cli_publishes_deployment_end_to_end(tmp_path):
 
         summary = json.loads(result.stdout)
         assert summary == {
-            "published": 1,
+            "published": 0,
             "skipped": 0,
+            "deferred": 1,
             "errors": 0,
         }
 
         with Session(engine) as db:
             deployment = db.get(Deployment, deployment_id)
 
-            assert deployment.status == "published"
+            assert deployment.status == "pending"
             assert deployment.publication_claim_id is None
             assert deployment.publication_claimed_at is None
-            assert deployment.published_commit_sha is not None
-
-            published_sha = deployment.published_commit_sha
+            assert deployment.publication_checked_at is not None
+            assert deployment.published_commit_sha is None
 
         verify = tmp_path / "verify"
         git("clone", str(remote), str(verify))
-
-        assert git("rev-parse", "HEAD", cwd=verify) == published_sha
 
         values_path = (
             verify
@@ -129,13 +128,7 @@ def test_cli_publishes_deployment_end_to_end(tmp_path):
             / "values.yaml"
         )
 
-        assert values_path.is_file()
-
-        values = yaml.safe_load(values_path.read_text())
-
-        assert values["deployment"]["revision"] == 1
-        assert values["image"]["repository"] == "example/cli-api"
-        assert values["image"]["tag"] == "v1.0.0"
+        assert not values_path.exists()
 
     finally:
         try:

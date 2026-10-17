@@ -31,7 +31,7 @@ def test_prepare_deployment_creates_gitops_values(tmp_path: Path):
 
     assert values["application"]["name"] == "afterpush-api"
     assert values["image"]["repository"] == "afterpush-api"
-    assert values["service"]["targetPort"] == 3000
+    assert values["service"]["targetPort"] == 8000
     assert values["ingress"]["host"] == "afterpush.local"
     assert values["autoscaling"]["enabled"] is True
     assert values["monitoring"]["enabled"] is True

@@ -35,6 +35,21 @@ def test_health_check():
     assert response.json()["status"] == "ok"
 
 
+def test_metrics_exposes_platform_http_metrics_without_scrape_feedback():
+    health = client.get("/health")
+    response = client.get("/metrics")
+
+    assert health.status_code == 200
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert (
+        'afterpush_http_requests_total{method="GET",route="/health",'
+        'status_code="200"}'
+    ) in response.text
+    assert "afterpush_http_request_duration_seconds_bucket" in response.text
+    assert 'route="/metrics"' not in response.text
+
+
 def test_validate_valid_config():
     response = client.post(
         "/api/v1/configs/validate",

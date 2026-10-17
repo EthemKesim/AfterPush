@@ -75,7 +75,10 @@ def main() -> int:
                         timeout_minutes=args.timeout_minutes,
                     )
 
-                    results[result] += 1
+                    if result == "superseded":
+                        results["not_published"] += 1
+                    else:
+                        results[result] += 1
                     db.rollback()
 
                 except Exception as exc:

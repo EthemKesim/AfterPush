@@ -6,6 +6,7 @@ from afterpush_api.services.bootstrap import (
     bootstrap_gitops_application,
 )
 from afterpush_api.services.gitops import (
+    GitOpsError,
     get_values_path,
     prepare_gitops_values,
     write_gitops_values,
@@ -38,8 +39,8 @@ def sync_gitops_application(
         Creates values.yaml when the application is new.
 
     Update:
-        Updates image repository and tag while preserving
-        existing Helm configuration.
+        Updates the deployment-owned image, port and replica
+        settings while preserving unrelated Helm configuration.
     """
 
     with gitops_application_lock(
@@ -75,6 +76,22 @@ def sync_gitops_application(
             image_tag=image_tag,
             project_id=project_id,
         )
+
+        service = updated_values.get("service")
+
+        if not isinstance(service, dict):
+            raise GitOpsError(
+                "Helm values must contain a service mapping."
+            )
+
+        updated_values = {
+            **updated_values,
+            "replicaCount": replicas,
+            "service": {
+                **service,
+                "targetPort": port,
+            },
+        }
 
         return write_gitops_values(
             gitops_root=gitops_root,

@@ -1,15 +1,27 @@
 import subprocess
 from uuid import uuid4
+from unittest.mock import patch
 
 import yaml
 from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session
 
 from afterpush_api.models import Application, Deployment, Project
+from afterpush_api.services.deployment_revision import (
+    create_versioned_deployment,
+)
 from afterpush_api.services.deployment_publication_worker import (
     publish_claimed_deployment,
 )
 from conftest import TEST_DATABASE_URL
+
+
+def patch_namespace_gate():
+    return patch(
+        "afterpush_api.services.deployment_publication_worker."
+        "check_deployment_namespace",
+        return_value="verified-test-namespace",
+    )
 
 
 def git(*args, cwd=None):
@@ -63,13 +75,17 @@ def test_publication_worker_persists_gitops_commit(tmp_path):
             db.add(application)
             db.flush()
 
-            deployment = Deployment(
+            deployment = create_versioned_deployment(
+                db,
                 application_id=application.id,
                 environment="dev",
                 image_tag="v1.0.0",
-                status="pending",
-                revision=1,
             )
+            assert deployment is not None
+
+            application.image = "example/worker-api-new"
+            application.port = 8080
+            application.replicas = 3
             db.add(deployment)
             db.flush()
 
@@ -80,11 +96,20 @@ def test_publication_worker_persists_gitops_commit(tmp_path):
             db.commit()
 
         with Session(engine) as db:
-            result = publish_claimed_deployment(
-                db=db,
-                deployment_id=deployment_id,
-                gitops_repository_url=str(remote),
-            )
+            with (
+                patch_namespace_gate(),
+                patch(
+                    "afterpush_api.services.deployment_publication_worker."
+                    "verify_gitops_rbac",
+                    return_value=None,
+                ),
+            ):
+                result = publish_claimed_deployment(
+                    db=db,
+                    deployment_id=deployment_id,
+                    gitops_repository_url=str(remote),
+                    core_api=object(),
+                )
 
             assert result == "published"
 
@@ -121,6 +146,8 @@ def test_publication_worker_persists_gitops_commit(tmp_path):
         assert values["deployment"]["revision"] == 1
         assert values["image"]["repository"] == "example/worker-api"
         assert values["image"]["tag"] == "v1.0.0"
+        assert values["service"]["targetPort"] == 3000
+        assert values["replicaCount"] == 2
 
     finally:
         try:

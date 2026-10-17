@@ -151,6 +151,19 @@
               "type": "boolean"
             }
           }
+        },
+
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "automountServiceAccountToken": {
+              "type": "boolean"
+            },
+            "readOnlyRootFilesystem": {
+              "type": "boolean"
+            }
+          }
         }
       }
     }

@@ -131,3 +131,26 @@ def test_generator_maps_application_name():
     assert values["application"]["name"] == "demo-api"
 
 
+def test_generator_maps_opt_in_pod_security_configuration():
+    config = get_config()
+    config["spec"]["security"] = {
+        "automountServiceAccountToken": False,
+        "readOnlyRootFilesystem": True,
+    }
+
+    values = generate_helm_values(config)
+
+    assert values["serviceAccount"] == {
+        "automountServiceAccountToken": False,
+    }
+    assert values["containerSecurity"] == {
+        "readOnlyRootFilesystem": True,
+    }
+
+
+def test_generator_uses_chart_security_defaults_when_not_configured():
+    values = generate_helm_values(get_config())
+
+    assert "serviceAccount" not in values
+    assert "containerSecurity" not in values
+

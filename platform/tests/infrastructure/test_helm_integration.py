@@ -167,7 +167,7 @@ def test_helm_chart_uses_application_identity():
 def test_deployment_uses_application_port():
     rendered = render_chart()
 
-    assert "containerPort: 3000" in rendered
+    assert "containerPort: 8000" in rendered
 
 
 def test_helm_chart_preserves_afterpush_application_identity():

@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: afterpush-namespace-bootstrap-preview
+  namespace: afterpush-system
+  labels:
+    app.kubernetes.io/name: afterpush
+    app.kubernetes.io/component: namespace-bootstrap
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: afterpush
+        app.kubernetes.io/component: namespace-bootstrap
+    spec:
+      serviceAccountName: afterpush-namespace-bootstrap
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bootstrap-worker
+          image: REPLACE_WORKER_IMAGE
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - afterpush_api.workers.namespace_bootstrap
+          args:
+            - --limit
+            - "20"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: afterpush-api-db
+                  key: DATABASE_URL
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

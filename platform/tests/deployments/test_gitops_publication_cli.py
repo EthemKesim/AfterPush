@@ -37,3 +37,24 @@ def test_cli_rejects_invalid_limit():
 
     assert result.returncode == 2
     assert "--limit must be greater than zero" in result.stderr
+
+
+def test_cli_requires_explicit_execute_confirmation():
+    env = os.environ.copy()
+    env["AFTERPUSH_GITOPS_REPOSITORY_URL"] = (
+        "https://example.com/afterpush-gitops.git"
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "afterpush_api.workers.gitops_publication",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "--execute is required" in result.stderr

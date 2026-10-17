@@ -33,6 +33,7 @@ def publish_with_retry(
     prepare_values: Callable[[Path], Path],
     commit_message: str,
     max_attempts: int = 3,
+    validate_content: Callable[[Path], None] | None = None,
 ) -> str:
     """
     Publish GitOps changes from a fresh main checkout.
@@ -70,6 +71,7 @@ def publish_with_retry(
                 repository_root=workspace,
                 values_path=values_path,
                 commit_message=commit_message,
+                validate_content=validate_content,
             )
 
             if commit_sha is None:

@@ -202,7 +202,7 @@ def test_application_name_respects_maximum_environment_length():
     assert len(result) <= 63
 
 
-def test_project_applicationset_enables_namespace_creation():
+def test_project_applicationset_does_not_create_namespaces():
     applicationset = load_applicationset(
         PROJECT_APPLICATIONSET
     )
@@ -214,9 +214,10 @@ def test_project_applicationset_enables_namespace_creation():
     assert sync_policy["automated"]["prune"] is True
     assert sync_policy["automated"]["selfHeal"] is True
 
-    assert "CreateNamespace=true" in (
-        sync_policy["syncOptions"]
-    )
+    sync_options = sync_policy.get("syncOptions", [])
+
+    assert "CreateNamespace=true" not in sync_options
+
 
 
 def test_legacy_applicationset_preserves_existing_gitops_path():

@@ -6,6 +6,9 @@ from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session
 
 from afterpush_api.models import Application, Deployment, Project
+from afterpush_api.services.deployment_revision import (
+    create_versioned_deployment,
+)
 from afterpush_api.services.deployment_gitops import DeploymentGitOpsSpec
 from afterpush_api.services.deployment_publication import (
     publish_deployment_gitops,
@@ -67,16 +70,18 @@ def test_recovery_completes_pushed_deployment(tmp_path):
             db.add(application)
             db.flush()
 
-            deployment = Deployment(
+            deployment = create_versioned_deployment(
+                db,
                 application_id=application.id,
                 environment="dev",
                 image_tag="v12",
-                revision=12,
-                status="publishing",
-                publication_claim_id=uuid4(),
-                publication_claimed_at=(
-                    datetime.now(timezone.utc) - timedelta(minutes=30)
-                ),
+            )
+            assert deployment is not None
+            deployment.revision = 12
+            deployment.status = "publishing"
+            deployment.publication_claim_id = uuid4()
+            deployment.publication_claimed_at = (
+                datetime.now(timezone.utc) - timedelta(minutes=30)
             )
             db.add(deployment)
             db.flush()
@@ -104,6 +109,14 @@ def test_recovery_completes_pushed_deployment(tmp_path):
         )
 
         assert published_sha is not None
+
+        with Session(engine) as db:
+            application = db.get(Application, application_id)
+            assert application is not None
+            application.image = "example/recovery-api-changed"
+            application.port = 8080
+            application.replicas = 3
+            db.commit()
 
         with Session(engine) as db:
             result = recover_published_deployment(

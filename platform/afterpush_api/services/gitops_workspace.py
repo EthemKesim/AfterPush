@@ -4,6 +4,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from afterpush_api.services.gitops_credentials import (
+    git_environment,
+    validate_repository_url,
+)
+
 
 class GitOpsWorkspaceError(Exception):
     """Raised when an isolated GitOps workspace cannot be created."""
@@ -27,6 +32,8 @@ def isolated_gitops_workspace(
         raise GitOpsWorkspaceError(
             "Repository URL cannot be empty."
         )
+
+    validate_repository_url(repository_url)
 
     if not branch:
         raise GitOpsWorkspaceError(
@@ -56,6 +63,7 @@ def isolated_gitops_workspace(
             text=True,
             check=False,
             timeout=60,
+            env=git_environment(),
         )
 
         if result.returncode != 0:

@@ -1,5 +1,6 @@
 import subprocess
 from uuid import uuid4
+from unittest.mock import patch
 
 import yaml
 from sqlalchemy import create_engine, delete
@@ -10,6 +11,14 @@ from afterpush_api.services.deployment_publication_worker import (
     process_pending_publications,
 )
 from conftest import TEST_DATABASE_URL
+
+
+def patch_namespace_gate():
+    return patch(
+        "afterpush_api.services.deployment_publication_worker."
+        "check_deployment_namespace",
+        return_value="verified-test-namespace",
+    )
 
 
 def git(*args, cwd=None):
@@ -80,11 +89,20 @@ def test_batch_publishes_multiple_deployments(tmp_path):
             db.commit()
 
         with Session(engine) as db:
-            result = process_pending_publications(
-                db=db,
-                gitops_repository_url=str(remote),
-                limit=20,
-            )
+            with (
+                patch_namespace_gate(),
+                patch(
+                    "afterpush_api.services.deployment_publication_worker."
+                    "verify_gitops_rbac",
+                    return_value=None,
+                ),
+            ):
+                result = process_pending_publications(
+                    db=db,
+                    gitops_repository_url=str(remote),
+                    limit=20,
+                    core_api=object(),
+                )
 
             assert result["published"] >= 2
             assert result["errors"] == 0

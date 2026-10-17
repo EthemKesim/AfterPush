@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+from afterpush_api.services.gitops_credentials import git_environment
+
 
 class GitOpsPushError(Exception):
     """Raised when GitOps push fails."""
@@ -42,6 +44,7 @@ def push_gitops_commit(
         text=True,
         check=False,
         timeout=60,
+        env=git_environment(),
     )
 
     if result.returncode != 0:

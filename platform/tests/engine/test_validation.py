@@ -89,6 +89,17 @@ def test_invalid_monitoring_type_is_rejected():
     assert len(errors) > 0
 
 
+def test_invalid_security_type_is_rejected():
+    config = get_valid_config()
+    config["spec"]["security"] = {
+        "readOnlyRootFilesystem": "yes",
+    }
+
+    errors = get_schema_errors(config)
+
+    assert len(errors) > 0
+
+
 def test_min_replicas_cannot_exceed_max_replicas():
     config = get_valid_config()
 
