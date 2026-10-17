@@ -19,3 +19,12 @@ within the 63-character limit.
 {{- end -}}
 {{- $name -}}
 {{- end -}}
+
+{{/* Return the workload ServiceAccount name. */}}
+{{- define "afterpush.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- .Values.serviceAccount.name | default (include "afterpush.resourceName" .) -}}
+{{- else -}}
+{{- required "serviceAccount.name is required when serviceAccount.create is false" .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

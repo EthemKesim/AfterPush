@@ -24,7 +24,7 @@ spec:
           imagePullPolicy: Never
 
           ports:
-            - containerPort: 3000
+            - containerPort: 8000
 
           envFrom:
             - configMapRef:
@@ -35,14 +35,14 @@ spec:
           readinessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 8000
             initialDelaySeconds: 2
             periodSeconds: 5
 
           livenessProbe:
             httpGet:
               path: /health
-              port: 3000
+              port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
 

@@ -7,7 +7,7 @@ image:
 service:
   type: ClusterIP
   port: 80
-  targetPort: 3000
+  targetPort: 8000
 config:
   appEnv: eks
   logLevel: info
@@ -44,3 +44,7 @@ probes:
     periodSeconds: 10
 monitoring:
   enabled: false
+serviceAccount:
+  automountServiceAccountToken: false
+containerSecurity:
+  readOnlyRootFilesystem: true

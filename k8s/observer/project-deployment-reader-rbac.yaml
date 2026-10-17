@@ -1,0 +1,32 @@
+# Template: replace PROJECT_NAMESPACE with the actual
+# namespace before applying to Kubernetes.
+#
+# Example namespace:
+# ap-dev-<project-uuid>
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: afterpush-deployment-reader
+  namespace: PROJECT_NAMESPACE
+rules:
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: afterpush-deployment-reader-binding
+  namespace: PROJECT_NAMESPACE
+subjects:
+  - kind: ServiceAccount
+    name: afterpush-runtime-worker
+    namespace: afterpush-system
+roleRef:
+  kind: Role
+  name: afterpush-deployment-reader
+  apiGroup: rbac.authorization.k8s.io

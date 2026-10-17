@@ -60,3 +60,15 @@ probes:
 
 monitoring:
   enabled: true
+
+networkPolicy:
+  enabled: false
+  allowedIngressNamespaces: []
+
+serviceAccount:
+  create: true
+  name: ""
+  automountServiceAccountToken: false
+
+containerSecurity:
+  readOnlyRootFilesystem: false

@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+
+metadata:
+  name: afterpush-platform-rbac
+  namespace: argocd
+
+spec:
+  description: Restricted ArgoCD project for AfterPush observer RBAC
+
+  sourceRepos:
+    - https://github.com/EthemKesim/AfterPush.git
+
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: ap-dev-*
+    - server: https://kubernetes.default.svc
+      namespace: ap-staging-*
+    - server: https://kubernetes.default.svc
+      namespace: ap-prod-*
+
+  namespaceResourceWhitelist:
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+
+  clusterResourceWhitelist: []

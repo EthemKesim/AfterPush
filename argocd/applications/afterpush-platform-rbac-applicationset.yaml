@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+metadata:
+  name: afterpush-platform-rbac
+  namespace: argocd
+
+spec:
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+
+  generators:
+    - git:
+        repoURL: https://github.com/EthemKesim/AfterPush.git
+        revision: main
+        directories:
+          - path: gitops/platform/rbac/projects/*/*/*
+
+  template:
+    metadata:
+      name: 'rbac-{{ index .path.segments 4 }}-{{ .path.path | sha256sum | trunc 12 }}'
+
+    spec:
+      project: afterpush-platform-rbac
+
+      source:
+        repoURL: https://github.com/EthemKesim/AfterPush.git
+        targetRevision: main
+        path: '{{ .path.path }}'
+        directory:
+          recurse: false
+
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 3m
