@@ -21,9 +21,16 @@ dist/
 .terraform/
 *.tfstate
 *.tfstate.*
+tfplan*
+*.tfplan
 crash.log
 *.tfvars
 *.tfvars.json
+
+# Local worktrees and temporary test backup
+/AfterPush-eks-gitops/
+/AfterPush-gitops-bootstrap/
+/platform/tests/conftest.py.bak
 
 # Misc
 *.log
@@ -39,7 +46,6 @@ __pycache__/
 
 # Python package metadata
 *.egg-info/
-
 # Python build artifacts
 platform/build/
 platform/dist/
