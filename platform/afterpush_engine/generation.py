@@ -22,7 +22,7 @@ def generate_helm_values(config: dict) -> dict:
             "logLevel": "info",
             "ingressClassName": "alb",
             "ingressAnnotations": {
-                "alb.ingress.kubernetes.io/scheme": "internet-facing",
+                "alb.ingress.kubernetes.io/scheme": "internal",
                 "alb.ingress.kubernetes.io/target-type": "ip",
                 "alb.ingress.kubernetes.io/healthcheck-path": spec["health"]["path"],
             },
