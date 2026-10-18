@@ -121,6 +121,22 @@ jobs:
       - name: Validate Terraform configuration
         run: terraform validate
 
+      - name: Initialize shared Terraform configuration
+        working-directory: terraform/shared
+        run: terraform init -backend=false
+
+      - name: Validate shared Terraform configuration
+        working-directory: terraform/shared
+        run: terraform validate
+
+      - name: Initialize EKS Terraform configuration
+        working-directory: terraform/eks
+        run: terraform init -backend=false
+
+      - name: Validate EKS Terraform configuration
+        working-directory: terraform/eks
+        run: terraform validate
+
       - name: Scan Terraform configuration
         uses: aquasecurity/trivy-action@v0.36.0
         with:
