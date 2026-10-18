@@ -25,23 +25,24 @@ Final sürümün yanlış GitOps branch'inden deploy etmemesini, bütün Terrafo
 
 ### Görevler ve çalışma sırası
 
-1. **GitOps branch tutarlılığı — Must-have**
-   - `argocd/eks/afterpush-api.yaml` içindeki `feat/eks-gitops-validation` referansının aktif mi, tarihsel bir validation manifesti mi olduğuna karar ver.
-   - Aktifse `main`e yönlendir; tarihsel ise aktif dağıtım yolundan ayır ve amacını açıkça belirt.
-   - Aktif Argo CD kaynaklarının beklenen repository, path ve branch'i kullandığını test et.
+1. **[x] GitOps branch tutarlılığı — Must-have (tamamlandı)**
+   - Ayrı EKS giriş manifesti desteklenen manuel EKS entry point olarak korundu.
+   - `argocd/eks/afterpush-api.yaml` içindeki chart ve values source'ları `main`e yönlendirildi.
+   - Repository, path, branch, values ref ve destination alanlarını doğrulayan statik altyapı testi eklendi.
 
-2. **Terraform CI kapsamı — Must-have**
-   - CI'da `terraform/`, `terraform/shared/` ve `terraform/eks/` için ayrı `init -backend=false` ve `validate` çalıştır.
-   - Mevcut recursive format kontrolünü koru.
+2. **[x] Terraform CI kapsamı — Must-have (tamamlandı)**
+   - CI'da `terraform/`, `terraform/shared/` ve `terraform/eks/` için ayrı `init -backend=false` ve `validate` çalıştırılır.
+   - Mevcut recursive format kontrolü ve Terraform config taraması korunur.
+   - Workflow sözleşmesi, üç state kökünün CI'da ayrı doğrulanmasını test eder.
 
-3. **API erişim sınırı — Must-have**
-   - Final dağıtım profilini single-operator, kontrollü/internal erişim olarak tanımla.
-   - Internet-facing ingress varsayımını bu kararla uyumlu hale getir.
-   - NetworkPolicy yalnızca ALB/Kubernetes trafik akışı render ve uygun testlerle doğrulandıktan sonra etkinleştir.
+3. **[x] API erişim sınırı — Must-have (tamamlandı)**
+   - Final EKS profilinin ALB scheme'i kimlik doğrulamasız yönetim API'si için `internal` olarak ayarlandı.
+   - Generator ve EKS GitOps values dosyaları aynı erişim varsayımını kullanır; statik test bu sözleşmeyi korur.
+   - NetworkPolicy, CNI ve gerçek ALB/Kubernetes trafik akışı doğrulanmadan etkinleştirilmez; mevcut güvenli kapalı varsayılan korunur.
 
-4. **Migration upgrade smoke — Must-have**
-   - `afterpush_test` üzerinde bilinen önceki migration durumundan `head`e yükseltmeyi doğrulayan küçük bir PostgreSQL testi ekle.
-   - Mevcut hedefli migration testlerini koru.
+4. **[x] Migration upgrade smoke — Must-have (tamamlandı)**
+   - `afterpush_test` içinde izole geçici şemada Alembic CLI ile boş durumdan `head`e tam yükseltme doğrulanır.
+   - Revision, temel deployment alanları ve mevcut hedefli migration testleri korunur.
 
 5. **Milestone doğrulaması — Must-have**
    - İlgili pytest testleri, Helm lint/template, üç Terraform dizininde fmt/init/validate ve CI pull request kontrolleri.
