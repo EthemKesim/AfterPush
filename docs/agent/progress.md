@@ -2,7 +2,11 @@
 
 ## Mevcut milestone
 
-**Milestone 2 — Reproducible Demo Journey** tamamlandı. Yerel PostgreSQL bootstrap, config doğrulama/render, FastAPI deployment/promotion ve geçici GitOps publication kanıtı; AWS/EKS gerektirmeden güvenli bir demo akışında doğrulandı. Milestone 3 henüz başlatılmadı; portföy belgeleri için ayrıntılı plan bir sonraki adımdır. Ayrıntılı plan: [roadmap.md](roadmap.md).
+**Milestone 3 — Portfolio Documentation Pack** must-have görevleriyle
+tamamlandı. README, public teknik mimari, demo kanıtı, terminal kayıt planı ve
+interview/CV/LinkedIn sunum rehberi aynı doğrulanmış FastAPI/PostgreSQL/worker/
+GitOps akışını anlatır. Canlı AWS/EKS davranışı temsil edilmiş gibi
+gösterilmez. Ayrıntılı plan: [roadmap.md](roadmap.md).
 
 ## Tamamlananlar
 
@@ -22,6 +26,27 @@
 - Yerel GitOps publication kanıtı, geçici bare repository'de worker'ın `main` branch'ine oluşturduğu commit ve values içeriğiyle demo runbook'una bağlandı.
 - Yerel demo PostgreSQL kurulumu; Python bağımlılıkları, Docker ile `afterpush_test`, migration ve güvenli temizlik sınırlarıyla belgelenmiş durumda.
 - Milestone 2 demo doğrulamasında ilgili demo, API/CLI/GitOps ve migration testlerinden 43'ü geçti; local Helm lint/template başarılı oldu.
+- Portfolio README, FastAPI control plane, PostgreSQL deployment state, worker
+  ayrımları, GitOps/Argo CD/Helm ilişkisi, doğrulama kanıtları ve kapsam
+  sınırlarıyla İngilizce olarak güncellendi.
+- `docs/architecture.md` public teknik referansı; system architecture ve
+  deployment lifecycle diyagramları, worker sorumlulukları, promotion,
+  recovery, Terraform/AWS sınırları ve local-demo ayrımını ekledi.
+- README, architecture, demo ve bağlı runbook dokümanlarının göreli bağlantıları
+  ile teknik iddiaları gözden geçirildi. AWS anahtarı, private key veya
+  production credential bulunmadı; `local-postgres.md` yalnızca
+  `afterpush_test` için sabit bir yerel demo parolası açıklar.
+- CLI config doğrulama/render ve geçici dizine GitOps values üretimi yeniden
+  başarılı oldu. `afterpush_test` üzerinde local journey ile isolated
+  publication integration testleri `2 passed` verdi; mevcut TestClient/httpx
+  deprecation uyarısı devam ediyor.
+- 60–90 saniyelik terminal-demo recording scripti eklendi. Henüz video veya
+  GIF kaydedilmedi; bu yüzden README'ye medya yer tutucusu eklenmedi.
+- GitHub About ve topic önerileri hazırlandı; GitHub repository metadata'sı
+  henüz değiştirilmedi.
+- `docs/portfolio.md`, 30 saniyelik pitch, 2–3 dakikalık teknik walkthrough,
+  ATS-uyumlu CV maddeleri, LinkedIn açıklaması ve son GitHub About/topics
+  önerisini doğrulanmış kapsamla hazırladı.
 
 ## Açık konular
 
@@ -29,5 +54,9 @@
 
 ## Sıradaki öncelikler
 
-1. Milestone 3 için README, mimari diyagramı ve portföy anlatımını mevcut sistem davranışıyla hizalamak.
-2. Canlı EKS worker aktivasyonunu final release kapsamı dışında, belgelenmiş bir sınır olarak korumak.
+1. Milestone 4 için son test, container security, Helm/Terraform, CI, demo ve
+   repository hygiene doğrulama paketini çalıştırmak ve sonuçları raporlamak.
+2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+   temsil edip etmediğini gözden geçirmek.
+3. Canlı EKS worker aktivasyonunu final release kapsamı dışında, belgelenmiş
+   bir sınır olarak korumak.
