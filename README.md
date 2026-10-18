@@ -1,15 +1,15 @@
 # AfterPush
 
-AfterPush is a single-operator platform engineering prototype for controlled
-application deployments. It combines a FastAPI control plane, PostgreSQL-backed
+AfterPush addresses a common deployment gap: accepting configuration does not
+by itself show which exact revision was requested, what was published, or
+whether the desired state was later verified. It is a single-operator platform
+engineering prototype that combines a FastAPI control plane, PostgreSQL-backed
 deployment state, GitOps publication workers, Helm, Argo CD, Kubernetes,
 Terraform, and GitHub Actions into a traceable deployment workflow.
 
-The project focuses on the engineering work between “a deployment was
-requested” and “the desired runtime state can be verified”: validating an
-application definition, recording a revision, preparing its deployment
-prerequisites, publishing versioned GitOps configuration, and reconciling the
-result in Kubernetes.
+The project validates an application definition, records an immutable
+deployment revision, prepares its prerequisites, publishes versioned GitOps
+configuration, and keeps runtime verification separate from that publication.
 
 ## What it demonstrates
 
@@ -40,9 +40,10 @@ flowchart LR
     end
 
     subgraph Desired-state delivery
+        Chart[Helm chart]
         GitOps --> Argo[Argo CD]
-        Argo --> Helm[Helm]
-        Helm --> Cluster[Kubernetes / Amazon EKS]
+        Chart --> Argo
+        Argo -->|renders Helm with Git-tracked values\nand reconciles| Cluster[Kubernetes / Amazon EKS]
     end
 
     Terraform[Terraform] -. provisions .-> Cluster
@@ -101,6 +102,21 @@ This is intentionally not a live AWS/EKS deployment demonstration: it does
 not push to a remote Git repository, sync Argo CD, roll out Kubernetes
 workloads, or claim live runtime health.
 
+A short, reproduced local example looks like this:
+
+```text
+$ afterpush validate platform/examples/afterpush.yaml
+✓ AfterPush configuration is valid.
+
+$ afterpush deploy platform/examples/afterpush.yaml --gitops-root <temporary-directory>
+✓ GitOps deployment prepared: <temporary-directory>/afterpush-api/values.yaml
+```
+
+The generated file contains the rendered image, service, ingress, and resource
+values. The [local demo](docs/demo/local-journey.md) and its isolated
+publication-worker test additionally prove deployment/promotion policy and a
+commit to a temporary bare Git repository.
+
 ## Technology choices
 
 - **FastAPI and PostgreSQL:** express the platform API and persist deployment
@@ -125,11 +141,10 @@ Pull requests and pushes to `main` run three CI jobs:
 - `Terraform Validate` checks formatting and validates the root, shared, and
   EKS Terraform configurations without a backend or an apply.
 
-The documented local demo, its related API/CLI/GitOps/migration checks, and
-Helm lint/template validation most recently completed with **43 passing
-tests**. The most recent broader platform suite recorded **811 passing tests**.
-The [roadmap](docs/agent/roadmap.md) and [progress record](docs/agent/progress.md)
-state the scope and evidence behind those results.
+Validation evidence is dated and scoped in the
+[final validation report](docs/final-validation.md), rather than treated as a
+permanent test-count claim. That report distinguishes local, CI, static, and
+live-environment evidence and links each outcome to a reproducible command.
 
 ## Further documentation
 
