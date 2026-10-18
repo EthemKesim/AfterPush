@@ -7,14 +7,14 @@ spec:
   project: default
   sources:
     - repoURL: https://github.com/EthemKesim/AfterPush.git
-      targetRevision: feat/eks-gitops-validation
+      targetRevision: main
       path: helm/afterpush
       helm:
         releaseName: afterpush-api
         valueFiles:
           - $values/gitops/apps/afterpush-api/values-eks.yaml
     - repoURL: https://github.com/EthemKesim/AfterPush.git
-      targetRevision: feat/eks-gitops-validation
+      targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc
