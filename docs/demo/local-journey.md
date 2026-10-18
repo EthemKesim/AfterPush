@@ -50,3 +50,8 @@ deployment için `values.yaml` üretip `main` branch'ine commit etmesini sağlar
 ve commit SHA ile dosya içeriğini kontrol eder. Repository test sonunda geçici
 dizinle birlikte silinir; GitHub'a veya gerçek GitOps repository'sine push
 yapılmaz.
+
+60–90 saniyelik güvenli terminal kaydı için İngilizce
+[terminal demo script](terminal-demo.md) kullanılabilir. Script, config
+doğrulama, values üretimi, deployment/promotion kanıtı ve geçici GitOps
+publication akışını video sırasına koyar.

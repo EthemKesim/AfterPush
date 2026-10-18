@@ -84,11 +84,51 @@ Yerel PostgreSQL, FastAPI, örnek application config, deployment/promotion ve iz
 
 Tamamlanma sonucu: yeni biri documented komutlarla güvenli bir ortamda platformun temel değer akışını tekrar edebilir.
 
-## Milestone 3 — Portfolio Documentation Pack
+## Milestone 3 — Portfolio Documentation Pack (must-have tamamlandı)
 
 README gerçek FastAPI/PostgreSQL/worker/GitOps mimarisini anlatacak şekilde güncellenir. Sürümlenebilir mimari ve lifecycle diyagramları, kurulum/test komutları, demo senaryosu, güvenlik sınırları, 30 saniyelik ve 2–3 dakikalık anlatım ile CV/LinkedIn proje metni hazırlanır.
 
-Tamamlanma sonucu: repository, doğrulanabilir iddialarla teknik bir portföy projesi olarak okunabilir ve sunulabilir olur.
+### Görevler
+
+1. **[x] Portfolio README — Must-have (tamamlandı)**
+   - README, single-operator prototype kapsamını, gerçek FastAPI/PostgreSQL
+     control plane'ini, GitOps ayrımını, doğrulama kanıtlarını ve sınırlarını
+     İngilizce olarak anlatır.
+   - Yerel demo ve teknik mimari belgesine doğrudan bağlantı eklenmiştir.
+2. **[x] Public technical architecture — Must-have (tamamlandı)**
+   - `docs/architecture.md`, system architecture ve deployment lifecycle
+     Mermaid diyagramlarını, worker ayrımlarını, güvenlik kararlarını ve canlı
+     sınırları teknik referans olarak açıklar.
+3. **[x] Documentation quality review and recording plan — Must-have (tamamlandı)**
+   - README, architecture, demo ve ilgili runbook bağlantıları; teknik iddia,
+     tekrar ve hassas bilgi riskleri açısından gözden geçirildi.
+   - Yerel CLI/demo/publication kanıtı yeniden çalıştırıldı; 60–90 saniyelik
+     güvenli terminal-demo scripti eklendi.
+   - Yerel Mermaid renderer bulunmadığından diyagramlar yapısal olarak
+     doğrulandı; GitHub render'ı remote push sonrasına kadar gözlemlenemez.
+4. **[x] GitHub metadata proposal — Must-have (tamamlandı, henüz uygulanmadı)**
+   - About önerisi: `Cloud-native deployment platform prototype featuring GitOps automation, Kubernetes, AWS, Terraform, Helm, Argo CD, and CI/CD.`
+   - Topics önerisi: `platform-engineering`, `devops`, `gitops`,
+     `kubernetes`, `aws`, `terraform`, `argocd`, `helm`,
+     `deployment-automation`, `ci-cd`, `fastapi`, `python`.
+   - GitHub repository metadata'sı kullanıcı onayı olmadan değiştirilmez.
+5. **[ ] Recorded demo asset — Optional**
+   - Terminal videosu veya GIF kaydedilir, gözden geçirilir ve ancak gerçek
+     kanıtı doğru temsil ediyorsa README'ye eklenir. Henüz kayıt yoktur.
+6. **[x] Final portfolio narrative — Must-have (tamamlandı)**
+   - 30 saniyelik ve 2–3 dakikalık proje anlatımı ile kısa CV/LinkedIn metni
+     `docs/portfolio.md` içinde hazırlanmıştır; yeni teknik iddia eklemez.
+
+### Kabul değerlendirmesi
+
+- README, public mimari referansı, demo/runbook bağlantıları ve güvenlik
+  sınırları mevcut implementasyonla hizalıdır.
+- Yerel demo, temporary Git publication ve ilgili otomatik test kanıtları
+  belgelenmiştir; canlı AWS/EKS sonucu gibi sunulmaz.
+- GitHub metadata önerisi ve interview/CV/LinkedIn anlatımı hazırlanmıştır.
+- Optional terminal videosu henüz kaydedilmemiştir; final release'i engellemez.
+
+Tamamlanma sonucu: repository, doğrulanabilir iddialarla teknik bir portföy projesi olarak okunabilir ve sunulabilir olur. Milestone 3'ün must-have görevleri tamamlanmıştır.
 
 ## Milestone 4 — Final Validation & GitHub Presentation
 
