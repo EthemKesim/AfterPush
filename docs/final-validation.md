@@ -18,7 +18,7 @@ not prove a live AWS/EKS deployment.
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
 | Terraform security configuration | FAIL | Static Trivy scan; findings below |
-| GitHub Actions for this review branch | NOT VERIFIED | Pending branch push and CI run |
+| GitHub Actions for this review branch | PASS | GitHub Actions run #173 |
 | Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
 
 ## Automated tests
@@ -176,10 +176,9 @@ validate checks.
 
 ## CI, documentation, and repository hygiene
 
-**NOT VERIFIED for this branch until it is pushed.** CI is expected to run
-`Legacy Demo Application Validate`, `Platform Validate`, and `Terraform
-Validate` for the Milestone 4 pull request. The final branch-specific result
-will be recorded after GitHub Actions completes.
+**PASS** — [GitHub Actions run #173](https://github.com/EthemKesim/AfterPush/actions/runs/39164255529)
+for review commit `95636d2` completed successfully. `Legacy Demo Application
+Validate`, `Platform Validate`, and `Terraform Validate` all passed.
 
 Workflow source review confirms that CI is triggered only for pull requests to
 `main` and pushes to `main`. The ECR image-delivery workflow is
@@ -192,9 +191,9 @@ to evaluate separately, not evidence that a live deployment ran.
 **PASS locally:** Markdown links were checked for repository-relative targets;
 `git diff --check` found no whitespace errors; no tracked `.env`, private key,
 Terraform state/plan, or credential file was found. Mermaid code fences and
-node/edge structure were reviewed statically. A local Mermaid renderer was
-not available, so rendering is **NOT VERIFIED** until GitHub's PR preview is
-inspected.
+node/edge structure were reviewed statically, then GitHub rendered the README
+system diagram and both `docs/architecture.md` diagrams successfully in the
+review branch preview.
 
 ```bash
 git diff --check

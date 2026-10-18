@@ -156,16 +156,18 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
      public subnet, HTTP ALB listener ve SNS KMS alanlarında HIGH/CRITICAL
      bulgular verdi. Erişim/topoloji kararları operator kapsamını etkilediği
      için kullanıcı onayı olmadan değiştirilmeyecek.
-6. **[ ] Branch CI ve GitHub presentation doğrulaması — Must-have**
-   - Milestone branch'i push edildikten sonra o commit için gerçek GitHub
-     Actions sonuçları ve Mermaid GitHub render'ı gözden geçirilecek.
+6. **[x] Branch CI ve GitHub presentation doğrulaması — Must-have**
+   - Review commit `95636d2` için GitHub Actions run #173 başarılı oldu:
+     Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
+   - README system architecture ile `docs/architecture.md` içindeki iki
+     Mermaid diyagramının GitHub preview render'ı gözlemlendi.
 
 ### Kabul değerlendirmesi
 
 Milestone 4 henüz tamamlanmış değildir. Yerel kod, container, Helm ve
-Terraform syntax doğrulamaları başarılı olsa da canlı altyapı için kritik
-Terraform güvenlik bulguları çözülmemiş veya kabul edilmiş risk olarak
-kararlaştırılmamıştır. Branch CI sonucu da henüz oluşmamıştır. Ayrıntılı kanıt:
+Terraform syntax doğrulamaları ve branch CI başarılı olsa da canlı altyapı için
+kritik Terraform güvenlik bulguları çözülmemiş veya kabul edilmiş risk olarak
+kararlaştırılmamıştır. Ayrıntılı kanıt:
 [final validation report](../final-validation.md).
 
 Tamamlanma sonucu: aşağıdaki Definition of Done karşılanır.

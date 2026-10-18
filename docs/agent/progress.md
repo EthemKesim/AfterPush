@@ -69,6 +69,10 @@ ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 - README, Argo CD'nin Helm chart'ını Git-tracked values ile render ettiğini
   doğru gösterecek şekilde düzeltildi; sabit tarihsel test sayıları yerine
   kapsamlı [final validation report](../final-validation.md) bağlantısı eklendi.
+- Milestone 4 review commit'i için GitHub Actions başarıyla tamamlandı:
+  Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
+  README system architecture ve `docs/architecture.md` içindeki iki Mermaid
+  diyagramı GitHub preview'da render edildi.
 
 ## Açık konular
 
@@ -77,14 +81,10 @@ ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
   ve encryption eksikliği, canlı release kararını engelliyor. Private-only
   endpoint veya allowlisted yönetici CIDR seçimi kullanıcı onayı gerektiren
   mimari karardır.
-- Milestone branch'i henüz push edilmediği için bu commit'e ait GitHub Actions
-  ve GitHub Mermaid render sonucu doğrulanmadı.
 
 ## Sıradaki öncelikler
 
 1. Terraform security findings için risk kabulü veya onaylı remediation
    kapsamını belirlemek.
-2. Milestone branch'ini push edip o commit'in GitHub Actions sonuçlarını ve
-   GitHub Mermaid render'ını kontrol etmek.
-3. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.
