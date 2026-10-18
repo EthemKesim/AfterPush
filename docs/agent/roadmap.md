@@ -17,7 +17,7 @@ Tahmini toplam çalışma: **20–30 odaklı saat**. Yeni işler, bu hedefi dest
 | 3. Portfolio Documentation Pack | README, diyagram ve sunum materyali | Must-have | Profesyonel GitHub sunumu |
 | 4. Final Validation & GitHub Presentation | Son kalite kontrolü ve release kararı | Must-have | Final release raporu |
 
-## Milestone 1 — Release Safety Baseline
+## Milestone 1 — Release Safety Baseline (tamamlandı)
 
 ### Amaç
 
@@ -44,9 +44,10 @@ Final sürümün yanlış GitOps branch'inden deploy etmemesini, bütün Terrafo
    - `afterpush_test` içinde izole geçici şemada Alembic CLI ile boş durumdan `head`e tam yükseltme doğrulanır.
    - Revision, temel deployment alanları ve mevcut hedefli migration testleri korunur.
 
-5. **Milestone doğrulaması — Must-have**
-   - İlgili pytest testleri, Helm lint/template, üç Terraform dizininde fmt/init/validate ve CI pull request kontrolleri.
-   - Canlı AWS/EKS, Terraform apply/destroy ve production migration çalıştırılmaz.
+5. **[x] Milestone doğrulaması — Must-have (tamamlandı)**
+   - İlgili pytest testleri, Helm lint/template ve Terraform format kontrolü yerelde tamamlandı.
+   - Pull request CI'ında Legacy Demo Application Validate, Platform Validate ve üç state kökünü kapsayan Terraform Validate başarılı oldu.
+   - Canlı AWS/EKS, Terraform apply/destroy ve production migration çalıştırılmadı.
 
 ### Bağımlılıklar ve öğrenme alanları
 

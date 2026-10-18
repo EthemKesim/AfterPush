@@ -2,7 +2,7 @@
 
 ## Mevcut milestone
 
-**Milestone 1 — Release Safety Baseline** aktiftir. Hedef, yeni özellik eklemeden önce final sürümdeki GitOps branch tutarlılığını, Terraform CI kapsamını, API erişim sınırını ve PostgreSQL migration doğrulamasını kapatmaktır. Ayrıntılı plan: [roadmap.md](roadmap.md).
+**Milestone 1 — Release Safety Baseline** tamamlandı. GitOps branch tutarlılığı, Terraform CI kapsamı, API erişim sınırı ve PostgreSQL migration upgrade doğrulaması; yerel kontrollerle ve pull request CI'ıyla doğrulandı. Milestone 2 henüz başlatılmadı; ayrıntılı demo paketi bir sonraki planlama adımıdır. Ayrıntılı plan: [roadmap.md](roadmap.md).
 
 ## Tamamlananlar
 
@@ -16,13 +16,13 @@
 - CI, `terraform/`, `terraform/shared/` ve `terraform/eks/` state köklerini backend'siz olarak ayrı başlatıp doğrulayacak şekilde genişletildi; bu kapsam otomatik workflow testiyle korunuyor.
 - Kimlik doğrulamasız platform API'sinin EKS ALB varsayılanı `internal` yapıldı; generator ve GitOps values dosyaları aynı kontrollü erişim modelini kullanıyor.
 - Alembic upgrade yolu, `afterpush_test` içinde izole geçici şemada Alembic CLI kullanılarak boş durumdan `head`e kadar smoke testle doğrulandı.
+- Pull request CI'ında Legacy Demo Application Validate, Platform Validate ve Terraform Validate başarıyla tamamlandı.
 
 ## Açık konular
 
-- Milestone 1'in yerel pytest, Helm ve diff kontrolleri geçti; üç Terraform kökünün Linux GitHub Actions sonucu bir pull request çalıştırıldığında gözden geçirilmelidir.
 - Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile yapılır.
 
 ## Sıradaki öncelikler
 
-1. Milestone 1 kabul kriterlerini çalıştırmak.
-2. Pull request CI'ında üç Terraform kökünün Linux runner üzerinde başarılı doğrulamasını gözden geçirmek.
+1. Milestone 2 için tekrarlanabilir yerel demo akışını ayrıntılandırmak.
+2. Canlı EKS worker aktivasyonunu final release kapsamı dışında, belgelenmiş bir sınır olarak korumak.
