@@ -15,7 +15,9 @@ ingress:
   enabled: true
   className: alb
   annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
+    # The platform API has no end-user authentication; keep the final EKS
+    # profile reachable only from the VPC unless that security model changes.
+    alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /health
   host: ''

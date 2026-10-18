@@ -102,7 +102,7 @@ def test_generator_applies_eks_platform_defaults():
 
     assert values["ingress"]["className"] == "alb"
     assert values["ingress"]["annotations"] == {
-        "alb.ingress.kubernetes.io/scheme": "internet-facing",
+        "alb.ingress.kubernetes.io/scheme": "internal",
         "alb.ingress.kubernetes.io/target-type": "ip",
         "alb.ingress.kubernetes.io/healthcheck-path": "/health",
     }

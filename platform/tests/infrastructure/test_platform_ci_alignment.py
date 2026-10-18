@@ -108,6 +108,37 @@ def test_ci_builds_and_scans_the_runtime_worker_image():
     assert scan["with"]["image-ref"] == "afterpush-runtime-worker:ci"
 
 
+def test_ci_validates_each_terraform_state_root():
+    workflow = _workflow("ci.yml")
+    terraform_steps = workflow["jobs"]["terraform"]["steps"]
+
+    expected_validations = {
+        "terraform": (
+            "Initialize Terraform",
+            "Validate Terraform configuration",
+        ),
+        "terraform/shared": (
+            "Initialize shared Terraform configuration",
+            "Validate shared Terraform configuration",
+        ),
+        "terraform/eks": (
+            "Initialize EKS Terraform configuration",
+            "Validate EKS Terraform configuration",
+        ),
+    }
+
+    for directory, (init_name, validate_name) in expected_validations.items():
+        init_step = next(step for step in terraform_steps if step["name"] == init_name)
+        validate_step = next(
+            step for step in terraform_steps if step["name"] == validate_name
+        )
+
+        assert init_step.get("working-directory", "terraform") == directory
+        assert init_step["run"] == "terraform init -backend=false"
+        assert validate_step.get("working-directory", "terraform") == directory
+        assert validate_step["run"] == "terraform validate"
+
+
 def test_platform_application_examples_match_fastapi_listen_port():
     for path in (
         "platform/examples/afterpush.yaml",
