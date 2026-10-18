@@ -2,11 +2,12 @@
 
 ## Mevcut milestone
 
-**Milestone 3 — Portfolio Documentation Pack** must-have görevleriyle
-tamamlandı. README, public teknik mimari, demo kanıtı, terminal kayıt planı ve
-interview/CV/LinkedIn sunum rehberi aynı doğrulanmış FastAPI/PostgreSQL/worker/
-GitOps akışını anlatır. Canlı AWS/EKS davranışı temsil edilmiş gibi
-gösterilmez. Ayrıntılı plan: [roadmap.md](roadmap.md).
+**Milestone 4 — Final Validation & GitHub Presentation** devam ediyor. Yerel
+platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
+doğrulamaları tamamlandı. Ancak Terraform statik güvenlik taramasındaki
+HIGH/CRITICAL bulgular ile branch CI sonucu, release kararından önce açıkça
+ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
+[final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
 
@@ -47,16 +48,43 @@ gösterilmez. Ayrıntılı plan: [roadmap.md](roadmap.md).
 - `docs/portfolio.md`, 30 saniyelik pitch, 2–3 dakikalık teknik walkthrough,
   ATS-uyumlu CV maddeleri, LinkedIn açıklaması ve son GitHub About/topics
   önerisini doğrulanmış kapsamla hazırladı.
+- Milestone 4 yerel platform paketi `afterpush_test` üzerinde **816 passed, 1
+  warning** sonucu verdi. Uyarı Starlette `TestClient`/`httpx` deprecation
+  bilgisidir; test başarısını etkilemedi.
+- Legacy Node uygulaması **3 passed** ile test edildi; lint/build başarılı,
+  `npm audit --audit-level=high` sonucu 0 vulnerability oldu.
+- Legacy, platform API ve runtime-worker imajları yerelde build edildi; health,
+  metrics ve worker command kontrolleri geçti. HIGH/CRITICAL Trivy image
+  taramalarında bulgu yoktu. Legacy runtime non-root `node` kullanıcısına
+  geçirildi; Docker build context'leri `.env` ve private-key pattern'lerini
+  hariç tutacak şekilde daraltıldı.
+- Helm local/EKS values ile lint/template edildi; internal EKS ingress,
+  ServiceAccount, HPA, resources ve container security ayarları render'da
+  doğrulandı. Argo CD repository kaynakları `main`i takip ediyor; runtime
+  CronJob `suspend: true` olarak kaldı.
+- Üç Terraform root geçici temiz kopyalarda `init -backend=false` ve
+  `validate` ile başarılı oldu. Trivy statik taramasında ise EKS public
+  endpoint/open CIDR, secret encryption, public subnet, HTTP ALB listener ve
+  SNS KMS alanlarında HIGH/CRITICAL bulgular tespit edildi.
+- README, Argo CD'nin Helm chart'ını Git-tracked values ile render ettiğini
+  doğru gösterecek şekilde düzeltildi; sabit tarihsel test sayıları yerine
+  kapsamlı [final validation report](../final-validation.md) bağlantısı eklendi.
+- Milestone 4 review commit'i için GitHub Actions başarıyla tamamlandı:
+  Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
+  README system architecture ve `docs/architecture.md` içindeki iki Mermaid
+  diyagramı GitHub preview'da render edildi.
 
 ## Açık konular
 
 - Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile yapılır.
+- Terraform statik güvenlik bulguları, özellikle EKS public endpoint/open CIDR
+  ve encryption eksikliği, canlı release kararını engelliyor. Private-only
+  endpoint veya allowlisted yönetici CIDR seçimi kullanıcı onayı gerektiren
+  mimari karardır.
 
 ## Sıradaki öncelikler
 
-1. Milestone 4 için son test, container security, Helm/Terraform, CI, demo ve
-   repository hygiene doğrulama paketini çalıştırmak ve sonuçları raporlamak.
+1. Terraform security findings için risk kabulü veya onaylı remediation
+   kapsamını belirlemek.
 2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
-   temsil edip etmediğini gözden geçirmek.
-3. Canlı EKS worker aktivasyonunu final release kapsamı dışında, belgelenmiş
-   bir sınır olarak korumak.
+   temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.

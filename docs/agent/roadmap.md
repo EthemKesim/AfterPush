@@ -130,9 +130,45 @@ README gerçek FastAPI/PostgreSQL/worker/GitOps mimarisini anlatacak şekilde g�
 
 Tamamlanma sonucu: repository, doğrulanabilir iddialarla teknik bir portföy projesi olarak okunabilir ve sunulabilir olur. Milestone 3'ün must-have görevleri tamamlanmıştır.
 
-## Milestone 4 — Final Validation & GitHub Presentation
+## Milestone 4 — Final Validation & GitHub Presentation (devam ediyor)
 
 Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulamaları, CI sonuçları, demo ve repository hygiene gözden geçirilir. Canlıda denenmeyen noktalar açıkça listelenir. GitHub About açıklaması, topics, isteğe bağlı `v1.0.0` tag/release ve kısa changelog yalnızca kullanıcı onayıyla hazırlanır.
+
+### Görevler ve durum
+
+1. **[x] Yerel uygulama ve demo doğrulaması — Must-have**
+   - Platform test paketi yalnızca `afterpush_test` üzerinde çalıştırıldı.
+   - Legacy Node test/lint/build/audit ve CLI/demo akışı yeniden doğrulandı.
+2. **[x] Container ve bağımlılık gözden geçirmesi — Must-have**
+   - Üç imaj yerelde build edildi; health/metrics/worker command kontrolleri ve
+     HIGH/CRITICAL Trivy taraması tamamlandı.
+   - Legacy imajın root kullanıcıyla çalışması düzeltildi; build context secret
+     dışlama kuralları eklendi.
+3. **[x] Helm, GitOps ve Terraform statik doğrulaması — Must-have**
+   - Helm local/EKS values ile lint ve template edildi; Argo kaynaklarının
+     `main` referansları ve suspended runtime worker kontrol edildi.
+   - Üç Terraform root backend'siz geçici kopyalarda format/validate edildi.
+4. **[x] README ve doğrulama kanıtı güncellemesi — Must-have**
+   - README problem/değer açıklaması, doğru Argo CD–Helm ilişkisi, kısa gerçek
+     local-demo kanıtı ve güncel validation raporu bağlantısıyla güncellendi.
+5. **[ ] Terraform security remediation veya açık accepted-risk kararı — Must-have**
+   - Trivy statik taraması EKS public endpoint/open CIDR, secret encryption,
+     public subnet, HTTP ALB listener ve SNS KMS alanlarında HIGH/CRITICAL
+     bulgular verdi. Erişim/topoloji kararları operator kapsamını etkilediği
+     için kullanıcı onayı olmadan değiştirilmeyecek.
+6. **[x] Branch CI ve GitHub presentation doğrulaması — Must-have**
+   - Review commit `95636d2` için GitHub Actions run #173 başarılı oldu:
+     Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
+   - README system architecture ile `docs/architecture.md` içindeki iki
+     Mermaid diyagramının GitHub preview render'ı gözlemlendi.
+
+### Kabul değerlendirmesi
+
+Milestone 4 henüz tamamlanmış değildir. Yerel kod, container, Helm ve
+Terraform syntax doğrulamaları ve branch CI başarılı olsa da canlı altyapı için
+kritik Terraform güvenlik bulguları çözülmemiş veya kabul edilmiş risk olarak
+kararlaştırılmamıştır. Ayrıntılı kanıt:
+[final validation report](../final-validation.md).
 
 Tamamlanma sonucu: aşağıdaki Definition of Done karşılanır.
 

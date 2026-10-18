@@ -38,6 +38,8 @@ RUN rm -rf \
     /usr/local/lib/node_modules/corepack \
     /usr/local/bin/corepack || true
 
+USER node
+
 EXPOSE 3000
 
 CMD ["node", "dist/server.js"]
