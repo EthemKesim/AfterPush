@@ -61,9 +61,26 @@ Final sürümün yanlış GitOps branch'inden deploy etmemesini, bütün Terrafo
 - Migration upgrade yolu `afterpush_test` üzerinde test edilir.
 - İlgili testler ve CI başarılıdır; bilinen canlı ortam sınırları belgelenir.
 
-## Milestone 2 — Reproducible Demo Journey
+## Milestone 2 — Reproducible Demo Journey (tamamlandı)
 
 Yerel PostgreSQL, FastAPI, örnek application config, deployment/promotion ve izole geçici GitOps repository kullanarak kısa bir demo akışı hazırlanır. AWS/EKS zorunlu olmayacak; çalışmayan canlı davranış demo edilmiş gibi gösterilmeyecektir.
+
+### Görevler ve çalışma sırası
+
+1. **[x] Yerel demo PostgreSQL bootstrap — Must-have (tamamlandı)**
+   - Docker ile yalnızca `afterpush_test` oluşturan, bağımlılık ve migration adımlarını açıkça ayıran kısa kurulum belgesi eklendi.
+   - Production bağlantısı, AWS/EKS ve Terraform işlemleri kapsam dışı bırakıldı.
+2. **[x] Yerel demo sözleşmesi — Must-have (tamamlandı)**
+   - Örnek config doğrulama/render, FastAPI deployment lifecycle ve geçici GitOps values üretimini tek testte birleştir.
+   - Gerçek runtime health yerine kullanılan test simülasyonunu açıkça belirt.
+3. **[x] Demo çalışma kılavuzu — Must-have (tamamlandı)**
+   - Tek komutla çalışacak, yalnızca `afterpush_test` kullanan kısa bir yerel runbook ekle.
+   - Canlı Git remote, AWS/EKS ve Argo CD sınırlarını belirt.
+4. **[x] İzole GitOps yayın gösterimi — Must-have (tamamlandı)**
+   - Yerel geçici Git repository ile publication worker'ın commit sonucunu mevcut test sözleşmeleriyle birleştir veya tekrar kullanılabilir hale getir.
+5. **[x] Demo doğrulaması — Must-have (tamamlandı)**
+   - Demo, publication worker, ilgili API/CLI/GitOps ve migration testleri `afterpush_test` üzerinde başarılı oldu.
+   - Local Helm lint ve template render kontrolleri başarılı oldu.
 
 Tamamlanma sonucu: yeni biri documented komutlarla güvenli bir ortamda platformun temel değer akışını tekrar edebilir.
 
