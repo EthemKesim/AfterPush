@@ -17,9 +17,9 @@ not prove a live AWS/EKS deployment.
 | Container builds and image scans | PASS | Local Docker and Trivy |
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
-| Terraform security configuration | BLOCKED | Static Trivy scan; one topology decision remains |
+| Terraform security configuration | PASS — scoped acceptance | Static Trivy scan plus documented single-operator risk acceptance |
 | GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
-| GitHub Actions for this remediation branch | PASS | CI run #176: all three required jobs succeeded |
+| GitHub Actions for this remediation branch | PASS | CI run #177: all three required jobs succeeded |
 | Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
 
 ## Automated tests
@@ -163,12 +163,12 @@ repositories (the required authorization-token action remains AWS-wide).
 
 ### Security configuration
 
-**BLOCKED — no CRITICAL finding remains, but one operator topology decision is
-still required before a live-release claim.** Trivy 0.74.0 was run on an
-isolated copy of Terraform source. The copy excluded local provider caches,
-untracked state/backup files, and untracked `tfplan*` artifacts; none were
-modified or committed. This avoids treating an old plan snapshot as current
-source configuration.
+**PASS for the explicitly accepted portfolio scope — no CRITICAL finding
+remains.** This is not a production-security claim and does not prove a live
+AWS/EKS deployment. Trivy 0.74.0 was run on an isolated copy of Terraform
+source. The copy excluded local provider caches, untracked state/backup files,
+and untracked `tfplan*` artifacts; none were modified or committed. This
+avoids treating an old plan snapshot as current source configuration.
 
 ```bash
 workdir=$(mktemp -d)
@@ -182,23 +182,52 @@ trivy config --severity HIGH,CRITICAL "$workdir/terraform"
 | --- | --- | --- |
 | AWS-0040 / AWS-0041 | RESOLVED | `terraform/eks/eks.tf` keeps private access on and explicitly sets `endpoint_public_access = false`; no administrator CIDR was invented. Operators need a reviewed VPC path such as VPN, bastion, or SSM before an apply. |
 | AWS-0039 | SCANNER LIMITATION | EKS Kubernetes 1.36 is constrained to 1.28+. AWS documents default envelope encryption for all Kubernetes API data at 1.28+, with an AWS-owned KMS key. The older customer-managed `encryption_config` pattern is deprecated for this version range, so it was not added solely to silence Trivy. [AWS EKS envelope encryption](https://docs.aws.amazon.com/eks/latest/userguide/envelope-encryption.html) |
-| AWS-0164 (two subnets) | CONDITIONAL RISK / BLOCKER | The managed node group still uses public subnets with automatic public IPv4 for bootstrap and image pulls. Disabling it safely requires an approved private-node route through NAT or VPC endpoints and changes recurring cost/connectivity. No such architecture was invented. |
+| AWS-0164 (two subnets) | ACCEPTED CONDITIONAL RISK | The managed node group still uses public subnets with automatic public IPv4 for bootstrap and image pulls. On 2026-10-19, the repository owner accepted this only for a personal, temporary, single-operator AWS test/demo/portfolio environment. It is excluded from production, public SaaS, multi-tenant, sensitive-data, long-running, or unrestricted-internet use. A private-node NAT/VPC-endpoint design remains required for those cases. |
 | AWS-0054 | RESOLVED | The legacy ECS ALB has only an HTTPS listener using an operator-supplied ACM certificate; plaintext HTTP was removed. |
 | AWS-0053 | RESOLVED | The legacy ECS ALB defaults to `internal`. Public mode requires an explicit selection and non-empty CIDR allowlist. |
 | AWS-0136 | RESOLVED | The alerts topic now uses a rotation-enabled customer-managed KMS key. The key policy permits only account-root administration, the named SNS topic, and the named CloudWatch alarm's required KMS actions. |
 
 The clean-source scan reported exactly one AWS-0039 HIGH finding and two
 AWS-0164 HIGH findings; it reported **no CRITICAL findings**. The first is the
-documented scanner limitation above. The second is a real design trade-off and
-is not an automatically accepted risk. Focused infrastructure tests protect
-the private endpoint, modern-encryption assumption, explicit public-node
-trade-off, TLS-only/internal ALB default, public allowlist guard, SNS KMS key,
-and existing Terraform/CI state-boundary contracts.
+documented scanner limitation above. The second is a real design trade-off
+accepted only under the scope and conditions below. Focused infrastructure
+tests protect the private endpoint, modern-encryption assumption, explicit
+public-node trade-off, TLS-only/internal ALB default, public allowlist guard,
+SNS KMS key, and existing Terraform/CI state-boundary contracts.
+
+### AWS-0164 risk-acceptance record
+
+**Decision owner and date:** repository owner, 2026-10-19.
+
+**Affected source:** `terraform/eks/networking.tf` defines
+`aws_subnet.public_a` and `aws_subnet.public_b` with
+`map_public_ip_on_launch = true`; `terraform/eks/eks.tf` places
+`aws_eks_node_group.main` in those subnets.
+
+**Accepted scope:** personal, temporary, single-operator AWS test/demo/
+portfolio use. It is not accepted for production, public SaaS, multi-tenant
+use, sensitive data, long-lived infrastructure, or unrestricted public
+internet exposure.
+
+| Control or condition | Classification | Evidence and boundary |
+| --- | --- | --- |
+| EKS Kubernetes API is not public | Enforced by source | `endpoint_private_access = true` and `endpoint_public_access = false` are tested statically. A reviewed VPC-based administrator path is still needed before apply. |
+| Managed node group has no source-configured SSH remote access | Source configuration evidence | `aws_eks_node_group.main` contains no `remote_access` or SSH key. This absence is not proof of the live node security groups. |
+| Platform API is intended to remain private | Enforced desired state | EKS GitOps values use an internal ALB and `ClusterIP` Service; Helm/source tests cover this. Actual ALB and CNI behavior were not exercised. |
+| Node inbound exposure is restricted | Operational live-use requirement | Before any approved apply/use, inspect resulting EKS-managed cluster/node security groups and confirm there is no unnecessary inbound node service or management path. Those groups are not declared in this Terraform root. |
+| Environment remains low-risk | Operational requirement | Keep it temporary and single-operator; do not use sensitive data. Verify account, region, and resource ownership before every live action. |
+
+**Re-review triggers:** any production or public exposure, multi-user access,
+sensitive-data use, a change to node/network topology, or extending this
+beyond a short-lived demo. Such a change requires a separate security review
+and, where appropriate, a costed private-node design using NAT gateways and/or
+VPC endpoints. This acceptance does not authorize a live Terraform apply, EKS
+operation, or data migration.
 
 ## CI, documentation, and repository hygiene
 
-**PASS** — [GitHub Actions run #176](https://github.com/EthemKesim/AfterPush/actions/runs/39223293007)
-for remediation commit `65275f7` completed successfully. `Legacy Demo
+**PASS** — [GitHub Actions run #177](https://github.com/EthemKesim/AfterPush/actions/runs/39223650940)
+for documentation commit `efd3d7a` completed successfully. `Legacy Demo
 Application Validate`, `Platform Validate`, and `Terraform Validate` all
 passed. The Terraform job formatted, initialized and validated all three state
 roots, then scanned Terraform configuration; the Platform job completed
@@ -238,10 +267,9 @@ Kubernetes runtime verification, activation of the reconciliation CronJob,
 remote GitOps publication, and production database migration were not
 performed. They remain intentionally unverified.
 
-**Release readiness: BLOCKED for a reviewed `v1.0.0` release today.** The
-project is a well-tested, documented portfolio prototype, and its former
-critical Terraform defaults have been remediated. Before a live-infrastructure
-claim or Milestone 4 closure, the operator must either accept the documented
-public-node-subnet risk or approve a costed private-node/NAT-or-endpoint
-topology. This review does not create a tag, GitHub Release, or
-production-readiness claim.
+**Release readiness: ready for final human review as a scoped `v1.0.0`
+portfolio prototype.** The project is well-tested and documented within the
+local, CI, static, and accepted-risk boundaries above. AWS-0164 is accepted
+only for the stated temporary single-operator scope; it is not a
+production-readiness claim. No tag, GitHub Release, merge, live Terraform
+operation, or EKS operation was created by this review.

@@ -2,11 +2,13 @@
 
 ## Mevcut milestone
 
-**Milestone 4 — Final Validation & GitHub Presentation** devam ediyor. Yerel
+**Milestone 4 — Final Validation & GitHub Presentation** tamamlandı. Yerel
 platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
 doğrulamaları tamamlandı; public EKS endpoint, plaintext/public legacy ALB ve
-SNS KMS bulguları düzeltildi. EKS node subnetlerinin public-IP topolojisi için
-henüz operator risk kabulü veya private-network tasarım kararı yoktur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
+SNS KMS bulguları düzeltildi. AWS-0164 public-node-subnet riski 2026-10-19'da
+yalnızca kişisel, geçici, single-operator test/demo/portfolio ortamı için
+koşullu kabul edildi. Bu production veya canlı EKS güvenlik kanıtı değildir.
+Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
@@ -91,24 +93,34 @@ henüz operator risk kabulü veya private-network tasarım kararı yoktur. Ayrı
   HIGH/CRITICAL image scan, Helm lint/template ve üç isolated Terraform root
   validate başarılı oldu. Local demo ile temporary Git publication testleri
   de geçti.
+- AWS-0164 için formal risk kabulü kaydedildi: yalnızca geçici,
+  single-operator portfolio/demo kapsamı; production, public SaaS,
+  multi-tenant kullanım, hassas veri ve uzun süreli/sınırsız internet erişimi
+  hariçtir. EKS-managed node/cluster security group'ları bu Terraform root'unda
+  tanımlı olmadığı için canlı işlemden önce inbound ve management exposure
+  operator tarafından doğrulanmalıdır. Kapsam/topoloji değişirse yeni güvenlik
+  incelemesi ve private-node tasarımı gerekir.
+- Milestone 4'ün must-have kabul kriterleri bu sınırlı risk kabulü ve mevcut
+  yerel/CI/statik kanıtla tamamlandı; Milestone 5 future plan olarak kaldı ve
+  uygulanmaya başlanmadı.
 
 ## Açık konular
 
-- Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile yapılır.
-- `terraform/eks/` managed node group'u public subnetlerde automatic public
-  IPv4 ile bootstrap ediyor. NAT/VPC endpoint gibi yeni maliyetli private-node
-  tasarımına geçmeden bu ayar kapatılamaz. Bu nedenle AWS-0164 için operator
-  risk kabulü veya onaylı topology değişikliği gerekir; Milestone 4 kapanmaz.
+- Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve
+  RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile
+  yapılır.
 - Live EKS apply, private API yönetici erişimi, Argo CD sync ve runtime
-  reconciliation hâlâ doğrulanmadı.
+  reconciliation hâlâ doğrulanmadı. Böyle bir canlı kullanımda AWS-0164 kabul
+  şartları (özellikle EKS-managed security group incelemesi, geçici scope ve
+  hassas veri yasağı) uygulanmalıdır.
 
 ## Sıradaki öncelikler
 
-1. EKS public-node-subnet AWS-0164 bulgusu için risk kabulü veya costed
-   private-node topology kararını belirlemek.
-2. Milestone 4 PR CI sonucunu doğrulamak; yalnızca açık risk çözülürse
-   Milestone 4'ü kapatmak ve v1.0.0 release notunu hazırlamak.
+1. Milestone 4 PR CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
+   incelemesiyle merge etmek. Tag/release oluşturmak ayrı açık onay ister.
+2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını ve private API
+   administrator path'ini doğrulamak; bu mevcut risk kabulünün yerine geçmez.
 3. Milestone 5'te AWS cost-safe shutdown/restore tasarımını, canlı yıkıcı
-   işlem yapmadan önce planlamak.
+   işlem yapmadan önce planlamak. Milestone 5 henüz başlamamıştır.
 4. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.

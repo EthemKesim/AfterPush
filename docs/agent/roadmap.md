@@ -130,7 +130,7 @@ README gerçek FastAPI/PostgreSQL/worker/GitOps mimarisini anlatacak şekilde g�
 
 Tamamlanma sonucu: repository, doğrulanabilir iddialarla teknik bir portföy projesi olarak okunabilir ve sunulabilir olur. Milestone 3'ün must-have görevleri tamamlanmıştır.
 
-## Milestone 4 — Final Validation & GitHub Presentation (devam ediyor)
+## Milestone 4 — Final Validation & GitHub Presentation (tamamlandı — koşullu AWS-0164 risk kabulüyle)
 
 Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulamaları, CI sonuçları, demo ve repository hygiene gözden geçirilir. Canlıda denenmeyen noktalar açıkça listelenir. GitHub About açıklaması, topics, isteğe bağlı `v1.0.0` tag/release ve kısa changelog yalnızca kullanıcı onayıyla hazırlanır.
 
@@ -151,7 +151,7 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
 4. **[x] README ve doğrulama kanıtı güncellemesi — Must-have**
    - README problem/değer açıklaması, doğru Argo CD–Helm ilişkisi, kısa gerçek
      local-demo kanıtı ve güncel validation raporu bağlantısıyla güncellendi.
-5. **[ ] Terraform security remediation ve açık operator kararı — Must-have**
+5. **[x] Terraform security remediation ve açık operator kararı — Must-have (tamamlandı)**
    - EKS public endpoint varsayılanı kapatıldı; private endpoint için VPN,
      bastion veya SSM gibi VPC-içi bir yönetici erişim yolu gerekir.
    - Legacy ECS ALB internal ve TLS-only varsayımına geçirildi. Public mod,
@@ -164,9 +164,15 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
      Trivy'nin eski `encryption_config` kuralı bu sağlayıcı davranışını
      tanımadığından bu bulgu scanner limitation olarak belgelenmiştir.
    - EKS managed node'larının mevcut public-subnet bootstrap topolojisindeki
-     automatic public IP ataması hâlâ HIGH bulgudur. NAT/VPC endpoint ve
-     maliyet/bağlantı tasarımı olmadan kapatılamaz; kullanıcı açık risk kabulü
-     veya private-node topology kararı vermediği için bu must-have açıktır.
+     automatic public IP ataması AWS-0164 HIGH bulgusudur. Repository owner,
+     2026-10-19'da bunu yalnızca kişisel, geçici, single-operator AWS
+     test/demo/portfolio ortamı için koşullu kabul etti. Production, public
+     SaaS, multi-tenant kullanım, hassas veri, uzun süreli altyapı ve sınırsız
+     internet erişimi kapsam dışıdır. Canlı kullanımdan önce EKS-managed
+     security group'lar ve gereksiz inbound/management exposure operator
+     tarafından doğrulanmalıdır; bu Terraform root'u bu grupları tanımlamaz.
+     Bu koşullar değişirse NAT/VPC endpoint içeren costed private-node
+     topolojisi ve yeni güvenlik incelemesi gerekir.
 6. **[x] Branch CI ve GitHub presentation doğrulaması — Must-have**
    - Review commit `95636d2` için GitHub Actions run #173 başarılı oldu:
      Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
@@ -175,11 +181,12 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
 
 ### Kabul değerlendirmesi
 
-Milestone 4 henüz tamamlanmış değildir. Yerel kod, container, Helm ve
-Terraform syntax doğrulamaları başarılıdır; önceki CRITICAL Terraform
-bulguları kapatılmıştır. Ancak managed node'ların public IP topolojisi için
-operator kararı/risk kabulü olmadan canlı altyapı güvenlik kabulü verilemez.
-Ayrıntılı kanıt:
+Milestone 4, belirtilen dar AWS-0164 risk kabulü ile tamamlanmıştır. Yerel
+kod, container, Helm ve Terraform syntax doğrulamaları başarılıdır; önceki
+CRITICAL Terraform bulguları kapatılmıştır. Bu sonuç production güvenlik veya
+canlı EKS doğrulaması anlamına gelmez. AWS-0164 için canlı security-group
+kontrolü, geçici/single-operator kapsam ve yeniden inceleme tetikleyicileri
+zorunlu operasyonel koşullardır. Ayrıntılı kanıt:
 [final validation report](../final-validation.md).
 
 Tamamlanma sonucu: aşağıdaki Definition of Done karşılanır.
