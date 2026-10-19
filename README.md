@@ -165,6 +165,23 @@ any live action. The [cost-safe AWS operations runbook](docs/runbooks/aws-cost-s
 explains live read-only inventory, restore boundaries, residual costs, and why
 the tool never promises a zero AWS bill.
 
+## Verified AWS shutdown
+
+The live AfterPush EKS environment was shut down on 2026-10-19 after
+account/region, ownership, state, backup, and destroy-plan checks. The EKS
+cluster, managed node group and worker, VPC networking, and EKS-scoped IAM
+resources are gone. The versioned Terraform S3 backend, shared GitHub OIDC
+delivery role, and ECR recovery repositories remain.
+
+The PostgreSQL StatefulSet was gracefully stopped and its detached 5 GiB EBS
+volume was snapshotted as encrypted recovery asset
+`snap-04c0bf420fd3f6715`; only after completion was the original volume
+deleted. The snapshot, retained ECR image storage, and versioned Terraform
+state may continue to incur charges. A live restore, snapshot-based database
+recovery, Argo CD bootstrap, and workload health check have **not** been
+performed. See the [final validation report](docs/final-validation.md) and
+[recovery runbook](docs/runbooks/aws-cost-safe-operations.md) before restoring.
+
 ## Further documentation
 
 - [Technical architecture](docs/architecture.md)
@@ -179,7 +196,7 @@ the tool never promises a zero AWS bill.
 - [Platform API metrics runbook](docs/runbooks/platform-api-metrics.md)
 - [Network policy validation runbook](docs/runbooks/network-policy-validation.md)
 - [Cost-safe AWS operations](docs/runbooks/aws-cost-safe-operations.md)
-- [v1.0.0 draft release summary](docs/releases/v1.0.0-draft.md)
+- [v1.0.0 release notes](docs/releases/v1.0.0.md)
 
 ## Scope and current boundaries
 

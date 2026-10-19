@@ -81,7 +81,8 @@ STATIC_INVENTORY = (
     ("EKS cluster and managed nodes", "destroy", "eks", "Control-plane and EC2 capacity are recurring costs."),
     ("EKS VPC, subnets, route table, and internet gateway", "destroy", "eks", "Removed with the EKS root after dependent resources."),
     ("EBS CSI addon and EKS/IRSA IAM roles", "destroy", "eks", "Recreated from state-backed configuration."),
-    ("ECR: afterpush-api and afterpush-runtime-worker", "retain", "shared", "Required for restoration; repositories have prevent_destroy."),
+    ("ECR repository afterpush-api; shared configuration also defines afterpush-runtime-worker", "retain", "shared", "Retain images and OIDC-backed publishing. The runtime-worker repository is absent live and will be created from configuration during restore."),
+    ("ECR repositories afterpush-platform-api and afterpush-platform-worker", "retain", "manual-review", "Retain existing platform images for recovery; these repositories are not managed by the shared Terraform state."),
     ("GitHub Actions ECR OIDC role", "retain", "shared", "Required for controlled image delivery after restore."),
     ("Legacy ECS, ALB, VPC endpoints, logs, alarms, SNS and KMS", "manual-review", "primary", "Separate legacy root; includes force-delete ECR and may retain data/cost."),
     ("Terraform S3 state bucket and lockfiles", "retain", "external", "State is required for safe recovery; never destroy through this tool."),
@@ -207,7 +208,10 @@ def terraform_state(args: argparse.Namespace, root: TerraformRoot) -> list[str]:
             f"Terraform state for {root.key} is unavailable. Refusing to infer ownership or create a replacement state."
         )
     addresses = [line.strip() for line in listed.stdout.splitlines() if line.strip()]
-    if any(not address.startswith("aws_") for address in addresses):
+    if any(
+        not (address.startswith("aws_") or address.startswith("data."))
+        for address in addresses
+    ):
         raise OperatorError(f"Terraform state for {root.key} contains an unexpected address; ownership is uncertain.")
     return addresses
 
@@ -261,7 +265,7 @@ def terraform_plan(args: argparse.Namespace, root: TerraformRoot, *, destroy: bo
         )
         if applied.returncode:
             raise OperatorError(
-                f"{root.key}: Terraform apply did not complete. State was retained; rerun status/verify before any retry."
+                f"{root.key}: Terraform apply did not complete. State may reflect partial progress; rerun status/verify and review the current state and plan before any retry."
             )
         emit(f"{root.key}: Terraform {'destroy' if destroy else 'restore'} completed from the reviewed plan.")
         return 2
@@ -295,7 +299,7 @@ def live_inventory(args: argparse.Namespace) -> None:
         ("Elastic IPs/public IPv4 candidates", ["ec2", "describe-addresses", "--output", "json"]),
         ("load balancer candidates", ["elbv2", "describe-load-balancers", "--output", "json"]),
         ("target group candidates", ["elbv2", "describe-target-groups", "--output", "json"]),
-        ("known ECR repositories", ["ecr", "describe-repositories", "--repository-names", "afterpush-api", "afterpush-runtime-worker", "launchforge-api", "--output", "json"]),
+        ("ECR repositories (account-wide; review ownership)", ["ecr", "describe-repositories", "--output", "json"]),
         ("Terraform state bucket", ["s3api", "head-bucket", "--bucket", "afterpush-terraform-state-833090513321"]),
         ("CloudWatch log groups", ["logs", "describe-log-groups", "--log-group-name-prefix", "/aws", "--output", "json"]),
         ("CloudWatch alarms", ["cloudwatch", "describe-alarms", "--alarm-name-prefix", "afterpush", "--output", "json"]),

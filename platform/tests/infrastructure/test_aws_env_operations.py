@@ -48,6 +48,7 @@ def _fake_terraform(
     state_output: str,
     state_exit: int = 0,
     plan_exit: int = 0,
+    apply_exit: int = 0,
 ) -> Path:
     return _executable(
         path,
@@ -57,6 +58,8 @@ def _fake_terraform(
         "if 'state' in arguments and 'list' in arguments:\n"
         f"    print({state_output!r})\n"
         f"    raise SystemExit({state_exit})\n"
+        "if 'apply' in arguments:\n"
+        f"    raise SystemExit({apply_exit})\n"
         "if 'plan' in arguments:\n"
         f"    raise SystemExit({plan_exit})\n"
         "raise SystemExit(0)\n",
@@ -225,6 +228,36 @@ def test_start_restores_shared_before_eks_from_accessible_state(tmp_path: Path):
     )
 
 
+def test_stop_accepts_data_sources_in_state_without_weakening_managed_resource_guard(tmp_path: Path):
+    aws = _fake_aws(tmp_path / "aws", "123456789012")
+    terraform = _fake_terraform(
+        tmp_path / "terraform",
+        "data.aws_availability_zones.available\naws_eks_cluster.main",
+        plan_exit=2,
+    )
+
+    result = _run(
+        "stop",
+        "--execute",
+        "--confirm",
+        "STOP",
+        "--account-id",
+        "123456789012",
+        "--profile",
+        "test-profile",
+        "--targets",
+        "eks",
+        "--data-recovery-confirmed",
+        "--aws-bin",
+        str(aws),
+        "--terraform-bin",
+        str(terraform),
+    )
+
+    assert result.returncode == 0
+    assert "Terraform destroy completed from the reviewed plan" in result.stdout
+
+
 def test_unknown_state_address_refuses_ownership_inference(tmp_path: Path):
     aws = _fake_aws(tmp_path / "aws", "123456789012")
     terraform = _fake_terraform(tmp_path / "terraform", "random_resource.unowned")
@@ -301,3 +334,34 @@ def test_plan_failure_preserves_retry_boundary(tmp_path: Path):
 
     assert result.returncode == 2
     assert "could not make a safe destroy plan" in result.stderr
+
+
+def test_apply_failure_warns_that_state_may_be_partially_updated(tmp_path: Path):
+    aws = _fake_aws(tmp_path / "aws", "123456789012")
+    terraform = _fake_terraform(
+        tmp_path / "terraform",
+        "aws_eks_cluster.main",
+        plan_exit=2,
+        apply_exit=1,
+    )
+
+    result = _run(
+        "stop",
+        "--execute",
+        "--confirm",
+        "STOP",
+        "--account-id",
+        "123456789012",
+        "--profile",
+        "test-profile",
+        "--targets",
+        "eks",
+        "--data-recovery-confirmed",
+        "--aws-bin",
+        str(aws),
+        "--terraform-bin",
+        str(terraform),
+    )
+
+    assert result.returncode == 2
+    assert "State may reflect partial progress" in result.stderr

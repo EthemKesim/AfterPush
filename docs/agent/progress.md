@@ -2,13 +2,13 @@
 
 ## Mevcut milestone
 
-**Milestone 5 — AWS Cost-Safe Shutdown & Restore** yerel güvenlik kapsamıyla
-tamamlandı. Milestone 4'ün koşullu AWS-0164 kabulü korunur; bu production veya
-canlı EKS güvenlik kanıtı değildir. Yeni operator aracı varsayılan preview,
-state-backed ownership ve açık execute onayıyla çalışır; canlı AWS/EKS/Argo CD
-restore çalıştırılmadı. v1.0.0, branch CI ve insan incelemesinden sonra final
-review'e hazır olur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
-[final-validation.md](../final-validation.md).
+**Milestone 5 — AWS Cost-Safe Shutdown & Restore** tamamlandı: canlı EKS
+altyapısı state-backed planla kapatıldı ve PostgreSQL verisi için şifreli
+snapshot korundu. Snapshot restore'u, EKS'i yeniden kurma, Argo CD sync'i ve
+uygulama health'i canlı olarak doğrulanmadı. AWS-0164 kaynak topolojisi için
+önceki koşullu risk kabulü, yeniden kurulumda güvenlik incelemesi gerektirir;
+bu production kanıtı değildir. Ayrıntılı plan: [roadmap.md](roadmap.md);
+kanıt: [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
 
@@ -87,9 +87,10 @@ review'e hazır olur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
   kaynak kopyasında Trivy 0.74.0 taraması artık yalnızca AWS-0039 (EKS 1.28+
   default encryption scanner limitation) ve iki AWS-0164 (public managed-node
   subnet) HIGH bulgusunu gösteriyor; CRITICAL bulgu kalmadı.
-- Final doğrulamada platform suite, süre sınırı nedeniyle iki parçaya bölünerek
-  `820 passed` verdi. Legacy test/lint/build/audit, üç Docker image build ve
-  HIGH/CRITICAL image scan, Helm lint/template ve üç isolated Terraform root
+- Final doğrulamada platform suite iki grupta `834 passed` verdi; güncel
+  lifecycle ve Terraform security testleri `18 passed`, tüm infrastructure
+  suite'i `426 passed` oldu. Legacy test/lint/build/audit, üç Docker image
+  build ve HIGH/CRITICAL image scan, Helm lint/template ve üç Terraform root
   validate başarılı oldu. Local demo ile temporary Git publication testleri
   de geçti.
 - AWS-0164 için formal risk kabulü kaydedildi: yalnızca geçici,
@@ -112,10 +113,26 @@ review'e hazır olur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 - Live/read-only inventory için account ID zorunludur. Her execute yolu doğru
   account/region, erişilebilir state, bilinen state adresleri, exact START/STOP
   onayı ve EKS için data recovery acknowledgement ister. Yerel test doubles
-  ile 12 yeni lifecycle safety testi geçti; canlı AWS çağrısı yapılmadı.
+  ile lifecycle safety regresyonları doğrulandı; canlı shutdown da ayrı olarak
+  state-backed tooling ile tamamlandı.
 - Milestone 5 local acceptance tamamlandı. Argo CD bootstrap ve runtime health
   script tarafından başarılı gösterilmez; private erişimden mevcut disaster
   recovery runbook'u izlenir ve live verification ayrı operator onayı ister.
+- 2026-10-19'da `terraform` profiliyle hesap/bölge doğrulandı; 17 etkin AWS
+  bölgesinde AfterPush etiketli/adlandırılmış kaynaklar tarandı. EKS state'i
+  önce 23 yönetilen destroy kaynağı içeriyordu ve güncel plan `0 add, 0
+  change, 23 destroy` ile önceki incelemeyle eşleşti.
+- PostgreSQL uygulama deployment'ları ve StatefulSet kontrollü durduruldu.
+  `vol-029214c0cf7f20222` detach edilip `snap-04c0bf420fd3f6715` tamamlandı ve
+  şifreleme/kaynak eşleşmesi doğrulandı; orijinal volume sonra silindi.
+- EKS cluster, node group ve worker, VPC/Internet Gateway ve EKS kaynaklı
+  IAM kaynakları kaldırıldı; EKS Terraform state'i boş, shared state/backend
+  korunuyor. Canlı EKS API restore'u veya snapshot restore'u yapılmadı.
+- Kapanış denemesinde önce EKS-managed ENI bağımlılığı nedeniyle Terraform
+  kısmi ilerledi. CloudTrail ve güncel state/plan incelendikten sonra yalnızca
+  kalan VPC/IGW planı safety tooling ile tamamlandı. Operator aracı artık
+  Terraform `data.*` state adreslerini güvenli biçimde kabul ediyor ve apply
+  hatasında kısmi ilerleme olasılığını açıkça bildiriyor.
 
 ## Açık konular
 
@@ -132,10 +149,12 @@ review'e hazır olur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 
 ## Sıradaki öncelikler
 
-1. Milestone 5 branch CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
-   incelemesiyle merge etmek. Tag/release oluşturmak ayrı açık onay ister.
-2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını, private API
+1. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını, private API
    administrator path'ini, data/secrets recovery planını ve resource ownership'i
    doğrulamak; bu mevcut risk kabulünün yerine geçmez.
-3. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.
+
+PR #90 check, merge ve GitHub release durumu zamanla değiştiği için GitHub
+üzerinden doğrulanmalıdır; bu dosya proje milestone kanıtını kaydeder, canlı
+repo durumunun kaynağı değildir.

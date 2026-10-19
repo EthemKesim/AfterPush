@@ -204,13 +204,13 @@ AfterPush ancak şu koşullarda **FINAL RELEASE** sayılır:
 
 Bu noktadan sonra optional özellikler final release'i engellemez. Yalnızca kritik hata veya güvenlik sorunu bakım işi olarak ele alınır.
 
-## Milestone 5 — AWS Cost-Safe Shutdown & Restore (local safety implementation complete)
+## Milestone 5 — AWS Cost-Safe Shutdown & Restore (shutdown complete; live restore unverified)
 
-Bu milestone, AfterPush kullanılmadığında maliyetli AWS kaynaklarını operator
-onayıyla güvenle indirmek ve state-backed configuration ile geri oluşturmak
-için tamamlandı. `scripts/aws-env.sh` güvenli preview ile başlar; canlı
-Terraform veya Kubernetes işlemi bu repository tarafından gerçekleştirilmemiş
-ve ayrıca operator onayı gerektirir.
+Bu milestone, canlı AfterPush EKS altyapısının güvenli şekilde kapatılması ve
+geri yükleme varlıklarının korunmasıyla tamamlandı. `scripts/aws-env.sh`
+varsayılan olarak preview üretir; yıkıcı/başlatıcı canlı işlemler açık operator
+onayı gerektirir. Shutdown canlı doğrulandı; restore ve uygulama health'i canlı
+olarak çalıştırılmadı.
 
 ### Amaç ve görevler
 
@@ -232,8 +232,8 @@ ve ayrıca operator onayı gerektirir.
 4. **[x] Cost verification and non-destructive validation — Must-have (tamamlandı)**
    - Retained storage, public IPv4, DNS, KMS ve logging residual cost'larını
      doğrulama yolunu belgele; sıfır fatura iddiası yapma.
-   - Önce statik/mocked kontrol ve plan/dry-run kanıtı üret. Gerçek teardown
-     veya restore yalnızca ayrı açık onayla yapılır.
+   - Önce statik/mocked kontrol ve plan/dry-run kanıtı üret. 2026-10-19'da
+     onaylı, state-backed canlı teardown uygulandı; restore yapılmadı.
 
 ### Kabul kriterleri
 
@@ -250,10 +250,13 @@ ve ayrıca operator onayı gerektirir.
   güvenli ret ile sonuçlanır.
 - Mock/test-double testleri dry-run, yanlış account, eksik state, partial
   restore, dependency order, repeat stop, ownership belirsizliği ve plan
-  failure/retry sınırını doğrular. Canlı AWS/EKS/Argo CD restore kanıtı yoktur;
+  failure/retry sınırını doğrular. Canlı EKS destroy planı 23 kaynağı kapsadı;
+  EKS state'i boş ve EKS/VPC/worker kaynakları silinmiş olarak doğrulandı.
   `verify --live` yalnızca read-only inventory üretir ve sıfır maliyet iddiası
-  yapmaz.
+  yapmaz. Snapshot ve source-backed restore yolu korunur; live restore kanıtı
+  yoktur.
 
-Tamamlanma sonucu: Milestone 5'in kod ve dokümantasyon kabul kriterleri yerel
-olarak karşılandı. v1.0.0 için son PR CI sonucu ve insan incelemesi gerekir;
-tag veya GitHub Release henüz oluşturulmaz.
+Tamamlanma sonucu: Milestone 5'in kod, live shutdown ve dokümantasyon kabul
+kriterleri karşılandı. EBS snapshot'ı `snap-04c0bf420fd3f6715`; state/backend,
+shared ECR ve OIDC kurtarma kaynakları retained durumdadır. Restore, Argo CD
+sync ve runtime health live olarak doğrulanmamıştır.
