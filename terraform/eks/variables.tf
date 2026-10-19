@@ -17,9 +17,14 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes version used by the EKS cluster."
+  description = "Kubernetes version used by the EKS cluster. EKS 1.28+ provides default envelope encryption for Kubernetes API data."
   type        = string
   default     = "1.36"
+
+  validation {
+    condition     = can(regex("^1\\.(2[89]|[3-9][0-9])$", var.kubernetes_version))
+    error_message = "The secure EKS profile requires Kubernetes 1.28 or later for default envelope encryption."
+  }
 }
 
 variable "node_instance_types" {

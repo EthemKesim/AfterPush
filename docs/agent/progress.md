@@ -2,11 +2,13 @@
 
 ## Mevcut milestone
 
-**Milestone 4 — Final Validation & GitHub Presentation** devam ediyor. Yerel
+**Milestone 4 — Final Validation & GitHub Presentation** tamamlandı. Yerel
 platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
-doğrulamaları tamamlandı. Ancak Terraform statik güvenlik taramasındaki
-HIGH/CRITICAL bulgular ile branch CI sonucu, release kararından önce açıkça
-ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
+doğrulamaları tamamlandı; public EKS endpoint, plaintext/public legacy ALB ve
+SNS KMS bulguları düzeltildi. AWS-0164 public-node-subnet riski 2026-10-19'da
+yalnızca kişisel, geçici, single-operator test/demo/portfolio ortamı için
+koşullu kabul edildi. Bu production veya canlı EKS güvenlik kanıtı değildir.
+Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
@@ -73,18 +75,52 @@ ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
   Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
   README system architecture ve `docs/architecture.md` içindeki iki Mermaid
   diyagramı GitHub preview'da render edildi.
+- Final security-remediation branch'inde EKS API endpoint'i private-only
+  varsayıma geçirildi. EKS 1.36'nın AWS-managed default envelope encryption
+  davranışı resmi AWS dokümantasyonuyla doğrulandı; deprecated customer-managed
+  `encryption_config` yalnızca scanner'ı yeşile çevirmek için eklenmedi.
+- Legacy ECS ALB internal/TLS-only varsayıma geçti. Public exposure, gerçek
+  ACM certificate ARN'i ve non-empty CIDR allowlist olmadan planlanamaz.
+- SNS alerts topic'i key rotation açık customer-managed KMS key'e taşındı;
+  policy, yalnızca bağlı SNS topic ve target-5xx CloudWatch alarmı için
+  `Decrypt`/`GenerateDataKey*` izni verir.
+- Yeni Terraform security sözleşme testleri geçti. Temiz, state/plan içermeyen
+  kaynak kopyasında Trivy 0.74.0 taraması artık yalnızca AWS-0039 (EKS 1.28+
+  default encryption scanner limitation) ve iki AWS-0164 (public managed-node
+  subnet) HIGH bulgusunu gösteriyor; CRITICAL bulgu kalmadı.
+- Final doğrulamada platform suite, süre sınırı nedeniyle iki parçaya bölünerek
+  `820 passed` verdi. Legacy test/lint/build/audit, üç Docker image build ve
+  HIGH/CRITICAL image scan, Helm lint/template ve üç isolated Terraform root
+  validate başarılı oldu. Local demo ile temporary Git publication testleri
+  de geçti.
+- AWS-0164 için formal risk kabulü kaydedildi: yalnızca geçici,
+  single-operator portfolio/demo kapsamı; production, public SaaS,
+  multi-tenant kullanım, hassas veri ve uzun süreli/sınırsız internet erişimi
+  hariçtir. EKS-managed node/cluster security group'ları bu Terraform root'unda
+  tanımlı olmadığı için canlı işlemden önce inbound ve management exposure
+  operator tarafından doğrulanmalıdır. Kapsam/topoloji değişirse yeni güvenlik
+  incelemesi ve private-node tasarımı gerekir.
+- Milestone 4'ün must-have kabul kriterleri bu sınırlı risk kabulü ve mevcut
+  yerel/CI/statik kanıtla tamamlandı; Milestone 5 future plan olarak kaldı ve
+  uygulanmaya başlanmadı.
 
 ## Açık konular
 
-- Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile yapılır.
-- Terraform statik güvenlik bulguları, özellikle EKS public endpoint/open CIDR
-  ve encryption eksikliği, canlı release kararını engelliyor. Private-only
-  endpoint veya allowlisted yönetici CIDR seçimi kullanıcı onayı gerektiren
-  mimari karardır.
+- Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve
+  RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile
+  yapılır.
+- Live EKS apply, private API yönetici erişimi, Argo CD sync ve runtime
+  reconciliation hâlâ doğrulanmadı. Böyle bir canlı kullanımda AWS-0164 kabul
+  şartları (özellikle EKS-managed security group incelemesi, geçici scope ve
+  hassas veri yasağı) uygulanmalıdır.
 
 ## Sıradaki öncelikler
 
-1. Terraform security findings için risk kabulü veya onaylı remediation
-   kapsamını belirlemek.
-2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+1. Milestone 4 PR CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
+   incelemesiyle merge etmek. Tag/release oluşturmak ayrı açık onay ister.
+2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını ve private API
+   administrator path'ini doğrulamak; bu mevcut risk kabulünün yerine geçmez.
+3. Milestone 5'te AWS cost-safe shutdown/restore tasarımını, canlı yıkıcı
+   işlem yapmadan önce planlamak. Milestone 5 henüz başlamamıştır.
+4. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.

@@ -57,3 +57,26 @@ variable "alert_email" {
   type        = string
   sensitive   = true
 }
+
+variable "alb_access_mode" {
+  description = "Exposure mode for the legacy ECS ALB. Public access requires an ACM certificate and explicit CIDR allowlist."
+  type        = string
+  default     = "internal"
+
+  validation {
+    condition     = contains(["internal", "public"], var.alb_access_mode)
+    error_message = "alb_access_mode must be either internal or public."
+  }
+}
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN required for the legacy ECS ALB HTTPS listener."
+  type        = string
+  sensitive   = true
+}
+
+variable "public_alb_ingress_cidrs" {
+  description = "Explicit IPv4 CIDRs permitted to reach a public legacy ECS ALB. Ignored while alb_access_mode is internal."
+  type        = set(string)
+  default     = []
+}

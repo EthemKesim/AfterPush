@@ -20,15 +20,21 @@ resource "aws_security_group" "ecs" {
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  for_each = toset(
+    var.alb_access_mode == "public" ?
+    var.public_alb_ingress_cidrs :
+    [var.vpc_cidr]
+  )
+
   security_group_id = aws_security_group.alb.id
 
-  cidr_ipv4   = "0.0.0.0/0"
-  from_port   = 80
-  to_port     = 80
+  cidr_ipv4   = each.value
+  from_port   = 443
+  to_port     = 443
   ip_protocol = "tcp"
 
-  description = "Allow HTTP traffic from the internet"
+  description = "Allow HTTPS traffic from the selected ALB access boundary"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "ecs_from_alb" {
