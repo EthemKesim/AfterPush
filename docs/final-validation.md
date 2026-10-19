@@ -19,7 +19,7 @@ not prove a live AWS/EKS deployment.
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
 | Terraform security configuration | BLOCKED | Static Trivy scan; one topology decision remains |
 | GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
-| GitHub Actions for this remediation branch | PENDING | PR has not been opened yet |
+| GitHub Actions for this remediation branch | PASS | CI run #176: all three required jobs succeeded |
 | Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
 
 ## Automated tests
@@ -197,11 +197,14 @@ and existing Terraform/CI state-boundary contracts.
 
 ## CI, documentation, and repository hygiene
 
-**PASS for the prior review branch** — [GitHub Actions run #173](https://github.com/EthemKesim/AfterPush/actions/runs/39164255529)
-for review commit `95636d2` completed successfully. `Legacy Demo Application
-Validate`, `Platform Validate`, and `Terraform Validate` all passed. The
-remediation branch CI result is intentionally recorded only after its PR is
-opened; it is not inferred from this local validation.
+**PASS** — [GitHub Actions run #176](https://github.com/EthemKesim/AfterPush/actions/runs/39223293007)
+for remediation commit `65275f7` completed successfully. `Legacy Demo
+Application Validate`, `Platform Validate`, and `Terraform Validate` all
+passed. The Terraform job formatted, initialized and validated all three state
+roots, then scanned Terraform configuration; the Platform job completed
+database migration, tests, image scans, container checks and Helm rendering.
+
+The prior review branch also passed [run #173](https://github.com/EthemKesim/AfterPush/actions/runs/39164255529).
 
 Workflow source review confirms that CI is triggered only for pull requests to
 `main` and pushes to `main`. The ECR image-delivery workflow is
