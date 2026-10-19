@@ -75,6 +75,9 @@ hidden limitation.
 - Defined Helm, Argo CD, Kubernetes security resources, Terraform state
   boundaries, and GitHub Actions validation; demonstrated the core lifecycle
   through local PostgreSQL and temporary Git repository integration tests.
+- Completed a state-verified teardown of the live EKS demo, retained its
+  versioned Terraform backend and delivery identity, and preserved PostgreSQL
+  in an encrypted EBS snapshot; the restore path remains untested live.
 
 ## LinkedIn project description
 
@@ -106,7 +109,9 @@ user-approved repository change.
 
 Prefer “validated locally” or “demonstrated with temporary Git integration
 tests” when discussing this project. Do not say that the runtime worker,
-Argo CD synchronization, or an EKS rollout has been operated successfully in a
-live environment. For commands and proof, see the [local demo](demo/local-journey.md),
-[terminal recording script](demo/terminal-demo.md), and
-[technical architecture](architecture.md).
+Argo CD synchronization, or a restored EKS rollout has been operated
+successfully in a live environment. The live EKS shutdown and encrypted
+PostgreSQL snapshot are verified; the snapshot has not been restored. For
+commands and proof, see the [local demo](demo/local-journey.md), [terminal
+recording script](demo/terminal-demo.md), and [technical
+architecture](architecture.md).

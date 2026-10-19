@@ -2,14 +2,13 @@
 
 ## Mevcut milestone
 
-**Milestone 4 — Final Validation & GitHub Presentation** tamamlandı. Yerel
-platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
-doğrulamaları tamamlandı; public EKS endpoint, plaintext/public legacy ALB ve
-SNS KMS bulguları düzeltildi. AWS-0164 public-node-subnet riski 2026-10-19'da
-yalnızca kişisel, geçici, single-operator test/demo/portfolio ortamı için
-koşullu kabul edildi. Bu production veya canlı EKS güvenlik kanıtı değildir.
-Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
-[final-validation.md](../final-validation.md).
+**Milestone 5 — AWS Cost-Safe Shutdown & Restore** tamamlandı: canlı EKS
+altyapısı state-backed planla kapatıldı ve PostgreSQL verisi için şifreli
+snapshot korundu. Snapshot restore'u, EKS'i yeniden kurma, Argo CD sync'i ve
+uygulama health'i canlı olarak doğrulanmadı. AWS-0164 kaynak topolojisi için
+önceki koşullu risk kabulü, yeniden kurulumda güvenlik incelemesi gerektirir;
+bu production kanıtı değildir. Ayrıntılı plan: [roadmap.md](roadmap.md);
+kanıt: [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
 
@@ -88,9 +87,10 @@ Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); ka
   kaynak kopyasında Trivy 0.74.0 taraması artık yalnızca AWS-0039 (EKS 1.28+
   default encryption scanner limitation) ve iki AWS-0164 (public managed-node
   subnet) HIGH bulgusunu gösteriyor; CRITICAL bulgu kalmadı.
-- Final doğrulamada platform suite, süre sınırı nedeniyle iki parçaya bölünerek
-  `820 passed` verdi. Legacy test/lint/build/audit, üç Docker image build ve
-  HIGH/CRITICAL image scan, Helm lint/template ve üç isolated Terraform root
+- Final doğrulamada platform suite iki grupta `834 passed` verdi; güncel
+  lifecycle ve Terraform security testleri `18 passed`, tüm infrastructure
+  suite'i `426 passed` oldu. Legacy test/lint/build/audit, üç Docker image
+  build ve HIGH/CRITICAL image scan, Helm lint/template ve üç Terraform root
   validate başarılı oldu. Local demo ile temporary Git publication testleri
   de geçti.
 - AWS-0164 için formal risk kabulü kaydedildi: yalnızca geçici,
@@ -101,8 +101,38 @@ Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); ka
   operator tarafından doğrulanmalıdır. Kapsam/topoloji değişirse yeni güvenlik
   incelemesi ve private-node tasarımı gerekir.
 - Milestone 4'ün must-have kabul kriterleri bu sınırlı risk kabulü ve mevcut
-  yerel/CI/statik kanıtla tamamlandı; Milestone 5 future plan olarak kaldı ve
-  uygulanmaya başlanmadı.
+  yerel/CI/statik kanıtla tamamlandı. Sonraki Milestone 5 planı daha sonra
+  yerel güvenlik kapsamıyla uygulandı; canlı restore kanıtı üretilmedi.
+- `scripts/aws-env.sh` ile `status`, `start`, `stop` ve `verify` operator
+  arayüzü eklendi. Varsayılan komutlar AWS, Terraform backend, Kubernetes veya
+  database'e dokunmayan preview üretir.
+- EKS stop yalnızca state-backed `terraform/eks/` için destroy-eligible'dır.
+  Shared ECR/OIDC ve Terraform state asset'leri retain edilir; legacy primary
+  root force-delete ECR içerdiği için açık legacy/backup kabulü olmadan
+  reddedilir.
+- Live/read-only inventory için account ID zorunludur. Her execute yolu doğru
+  account/region, erişilebilir state, bilinen state adresleri, exact START/STOP
+  onayı ve EKS için data recovery acknowledgement ister. Yerel test doubles
+  ile lifecycle safety regresyonları doğrulandı; canlı shutdown da ayrı olarak
+  state-backed tooling ile tamamlandı.
+- Milestone 5 local acceptance tamamlandı. Argo CD bootstrap ve runtime health
+  script tarafından başarılı gösterilmez; private erişimden mevcut disaster
+  recovery runbook'u izlenir ve live verification ayrı operator onayı ister.
+- 2026-10-19'da `terraform` profiliyle hesap/bölge doğrulandı; 17 etkin AWS
+  bölgesinde AfterPush etiketli/adlandırılmış kaynaklar tarandı. EKS state'i
+  önce 23 yönetilen destroy kaynağı içeriyordu ve güncel plan `0 add, 0
+  change, 23 destroy` ile önceki incelemeyle eşleşti.
+- PostgreSQL uygulama deployment'ları ve StatefulSet kontrollü durduruldu.
+  `vol-029214c0cf7f20222` detach edilip `snap-04c0bf420fd3f6715` tamamlandı ve
+  şifreleme/kaynak eşleşmesi doğrulandı; orijinal volume sonra silindi.
+- EKS cluster, node group ve worker, VPC/Internet Gateway ve EKS kaynaklı
+  IAM kaynakları kaldırıldı; EKS Terraform state'i boş, shared state/backend
+  korunuyor. Canlı EKS API restore'u veya snapshot restore'u yapılmadı.
+- Kapanış denemesinde önce EKS-managed ENI bağımlılığı nedeniyle Terraform
+  kısmi ilerledi. CloudTrail ve güncel state/plan incelendikten sonra yalnızca
+  kalan VPC/IGW planı safety tooling ile tamamlandı. Operator aracı artık
+  Terraform `data.*` state adreslerini güvenli biçimde kabul ediyor ve apply
+  hatasında kısmi ilerleme olasılığını açıkça bildiriyor.
 
 ## Açık konular
 
@@ -113,14 +143,18 @@ Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); ka
   reconciliation hâlâ doğrulanmadı. Böyle bir canlı kullanımda AWS-0164 kabul
   şartları (özellikle EKS-managed security group incelemesi, geçici scope ve
   hassas veri yasağı) uygulanmalıdır.
+- `terraform/` legacy root'u ECS/ALB yanında `force_delete` ECR içerir. Normal
+  stop akışının dışında tutulmuştur; tamamen kapatma ancak ayrıca incelenmiş
+  image backup ve açık operator onayıyla ele alınabilir.
 
 ## Sıradaki öncelikler
 
-1. Milestone 4 PR CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
-   incelemesiyle merge etmek. Tag/release oluşturmak ayrı açık onay ister.
-2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını ve private API
-   administrator path'ini doğrulamak; bu mevcut risk kabulünün yerine geçmez.
-3. Milestone 5'te AWS cost-safe shutdown/restore tasarımını, canlı yıkıcı
-   işlem yapmadan önce planlamak. Milestone 5 henüz başlamamıştır.
-4. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+1. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını, private API
+   administrator path'ini, data/secrets recovery planını ve resource ownership'i
+   doğrulamak; bu mevcut risk kabulünün yerine geçmez.
+2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.
+
+PR #90 check, merge ve GitHub release durumu zamanla değiştiği için GitHub
+üzerinden doğrulanmalıdır; bu dosya proje milestone kanıtını kaydeder, canlı
+repo durumunun kaynağı değildir.

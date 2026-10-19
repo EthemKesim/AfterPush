@@ -1,8 +1,8 @@
 # Final validation and release-readiness review
 
 **Review date:** 2026-10-19
-**Repository baseline:** `main` at `69e2fd0` (merged PR #88)
-**Review branch:** `codex/final-security-remediation`
+**Repository baseline:** `main` at `3c14b7f` (merged PR #89)
+**Review branch:** `codex/aws-cost-safe-operations`
 
 This report records the final review evidence for the portfolio prototype. A
 result marked PASS proves only the stated local, CI, or static scope; it does
@@ -12,15 +12,17 @@ not prove a live AWS/EKS deployment.
 
 | Area | Outcome | Evidence type |
 | --- | --- | --- |
-| FastAPI platform tests | PASS | Local `afterpush_test` PostgreSQL |
+| FastAPI platform tests | PASS | 834 passed across two local `afterpush_test` PostgreSQL groups |
 | Legacy Node application | PASS | Local test, lint, build, dependency audit |
 | Container builds and image scans | PASS | Local Docker and Trivy |
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
 | Terraform security configuration | PASS — scoped acceptance | Static Trivy scan plus documented single-operator risk acceptance |
+| AWS lifecycle safety tool | PASS — local/mock and live shutdown | Preview/guard tests plus state-backed EKS teardown; live restore not verified |
 | GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
-| GitHub Actions for this remediation branch | PASS | CI run #177: all three required jobs succeeded |
-| Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
+| GitHub Actions before final repository changes | PASS | Earlier PR #90 head `758fd1d` had all three checks pass; consult PR #90 for current head status |
+| Live AWS shutdown | PASS | EKS state empty; cluster, worker, VPC, and original PostgreSQL volume removed |
+| Live AWS/EKS restore, Argo CD, and runtime reconciliation | NOT VERIFIED | No restore, sync, or post-restore health check was performed |
 
 ## Automated tests
 
@@ -42,13 +44,13 @@ platform/.venv/bin/python -m pytest \
   platform/tests/deployments platform/tests/gitops -q
 ```
 
-Result: **820 passed, 1 warning**. The environment's per-command time limit
-required two complete directory groups (492 and 328 tests), both against the
-same `afterpush_test` database. This suite covers Alembic
-migration paths, deployment revisions and promotion, prerequisite/namespace/
-RBAC gates, publication/recovery/stale-claim paths, runtime reconciliation,
-GitOps integration, CLI validation/rendering, local demo, and infrastructure
-and workflow contract tests.
+Result: **834 passed** across two complete directory groups (506 and 328
+tests), both against the same `afterpush_test` database. Each group reported
+the existing Starlette `TestClient`/`httpx` deprecation warning. This suite
+covers Alembic migration paths, deployment revisions and promotion,
+prerequisite/namespace/RBAC gates, publication/recovery/stale-claim paths,
+runtime reconciliation, GitOps integration, CLI validation/rendering, local
+demo, and infrastructure and workflow contract tests.
 
 Warning: Starlette's `TestClient` reports that its current `httpx` integration
 is deprecated. It did not fail a test; dependency compatibility should be
@@ -63,7 +65,8 @@ npm test && npm run lint && npm run build && npm audit --audit-level=high
 ```
 
 Result: **3 passed**; lint and TypeScript build succeeded; `npm audit` found
-**0 vulnerabilities** at the HIGH/CRITICAL threshold. An initial sandboxed
+**0 vulnerabilities** at the HIGH/CRITICAL threshold. These checks were rerun
+for the final repository changes. An initial sandboxed
 test attempt could not bind a temporary local port (`EPERM`); the same test
 passed in the permitted local execution environment, so that was an execution
 environment limitation rather than an application failure.
@@ -137,7 +140,8 @@ be reviewed before activation.
 
 **NOT VERIFIED:** a real cluster's admission behavior, NetworkPolicy/CNI
 enforcement, ALB behavior, Argo CD synchronization, workload rollout, and
-runtime-worker observation. No cluster was contacted.
+runtime-worker observation. The offline source checks did not contact a
+cluster; the separately documented EKS shutdown was verified live.
 
 ## Terraform and AWS
 
@@ -211,7 +215,7 @@ internet exposure.
 
 | Control or condition | Classification | Evidence and boundary |
 | --- | --- | --- |
-| EKS Kubernetes API is not public | Enforced by source | `endpoint_private_access = true` and `endpoint_public_access = false` are tested statically. A reviewed VPC-based administrator path is still needed before apply. |
+| EKS Kubernetes API is not public | Enforced by source; live drift removed | Source tests require private-only access. The final live inventory found the old cluster open to `0.0.0.0/0`; that cluster was destroyed. A reviewed VPC-based administrator path is still needed before any restore. |
 | Managed node group has no source-configured SSH remote access | Source configuration evidence | `aws_eks_node_group.main` contains no `remote_access` or SSH key. This absence is not proof of the live node security groups. |
 | Platform API is intended to remain private | Enforced desired state | EKS GitOps values use an internal ALB and `ClusterIP` Service; Helm/source tests cover this. Actual ALB and CNI behavior were not exercised. |
 | Node inbound exposure is restricted | Operational live-use requirement | Before any approved apply/use, inspect resulting EKS-managed cluster/node security groups and confirm there is no unnecessary inbound node service or management path. Those groups are not declared in this Terraform root. |
@@ -224,10 +228,110 @@ and, where appropriate, a costed private-node design using NAT gateways and/or
 VPC endpoints. This acceptance does not authorize a live Terraform apply, EKS
 operation, or data migration.
 
+## Cost-safe shutdown and restore
+
+**PASS for local safety behavior and live shutdown; live AWS/EKS restore remains
+unverified.**
+`scripts/aws-env.sh` exposes `status`, `start`, `stop`, and `verify`. Without
+`--live` or `--execute`, each command is a source-only preview and does not
+contact AWS, a Terraform backend, Kubernetes, or a database.
+
+The normal lifecycle keeps `terraform/shared/` ECR repositories and the GitHub
+OIDC role as recovery assets, protects the Terraform S3 state bucket, and
+limits normal destroy eligibility to the EKS root. It refuses a destructive
+operation unless the account ID and `eu-central-1` region match, remote state
+is readable, state addresses establish ownership, the exact confirmation word
+is supplied, and EKS teardown acknowledges data/secrets recovery. The legacy
+primary root remains outside the normal stop path because it contains a
+force-delete ECR repository; it needs separate legacy and image-backup
+acknowledgements.
+
+`verify --live` is deliberately read-only. It inventories EKS, EC2/EBS, ECS,
+VPC/subnet/route/security-group candidates, NAT gateways, public IPv4/EIPs,
+load balancers/target groups, ECR, state-bucket access, CloudWatch, SNS, KMS,
+and Route 53, then marks any non-state-owned candidate for manual review. It
+does not run a broad cleanup command and cannot prove that an AWS bill is zero.
+
+The local contract suite covered safe preview, start confirmation, wrong AWS
+account, missing state, repeated stop against an empty state, retained shared
+assets, dependency ordering, partial-state planning, unknown ownership, and
+plan-failure recovery boundaries. Final lifecycle and Terraform security
+regression tests passed: **18 passed, 1 warning**. The complete affected
+`platform/tests/infrastructure` suite passed: **426 passed, 1 warning**, using
+only `afterpush_test`. The warning is the existing Starlette `TestClient`/
+`httpx` deprecation warning.
+
+The tool can recreate state-backed infrastructure from a reviewed Terraform
+plan, but it does not bootstrap Argo CD or assert Kubernetes application
+health. After a restored EKS cluster, the operator must use private API access,
+provide secrets out of band, and follow the existing disaster-recovery runbook
+to bootstrap Argo CD and observe GitOps reconciliation.
+
+## Final live shutdown and cost audit
+
+On 2026-10-19, `aws sts get-caller-identity --profile terraform` verified the
+intended account and `eu-central-1` region. The `terraform/eks/` state contained
+23 managed resources; a freshly generated plan was `0 add, 0 change, 23
+destroy`, matching the previously reviewed scope. The first Terraform apply
+partially completed: the EKS cluster, managed node group, and most EKS
+resources were removed, but the Internet Gateway could not detach while
+EKS-managed ENIs still had mapped public addresses. CloudTrail, current state,
+and the remaining two-resource destroy plan were reviewed. After AWS removed
+the ENIs, the same guarded lifecycle command completed the VPC/Internet
+Gateway deletion. The final EKS state is empty and the shared and primary
+states remain unchanged.
+
+Direct post-shutdown AWS checks confirmed:
+
+- No EKS clusters or running AfterPush EC2 instances; the `c7i-flex.large`
+  worker is `terminated`.
+- No AfterPush VPC, subnet, ENI, Internet Gateway, route-table candidate,
+  NAT Gateway, Elastic IP, load balancer, or target group.
+- No ECS clusters/services, RDS instances, DynamoDB tables, or Lambda
+  resources named for AfterPush in the 17 enabled AWS regions checked.
+- No AfterPush CloudWatch alarms/log groups, SNS topics, or Route 53 hosted
+  zones in the target region. EKS-specific IAM roles/OIDC provider are gone;
+  the GitHub Actions OIDC provider and `afterpush-github-actions-ecr` role
+  remain for image delivery.
+- Three ECR repositories and 12 image manifests remain:
+  `afterpush-api`, `afterpush-platform-api`, and
+  `afterpush-platform-worker`. Their reported image-size metadata sums to
+  approximately 0.62 GiB; this is not a precise billable unique-layer total.
+  The shared configuration defines `afterpush-runtime-worker`, but that
+  repository was absent live and will be created by a future approved restore.
+- The legacy `launchforge-api` ECS task-definition family has registered
+  revisions but no ECS cluster/service. Task definitions alone do not run
+  compute. Unrelated S3 buckets and other account resources were not changed.
+
+The PostgreSQL StatefulSet was gracefully shut down, the volume was detached,
+and encrypted snapshot **`snap-04c0bf420fd3f6715`** reached `completed` before
+the original `vol-029214c0cf7f20222` was deleted. The snapshot is 5 GiB,
+private to the account, sourced from that volume, and encrypted using the
+enabled AWS-managed `aws/ebs` key. It remains available in `eu-central-1`;
+the snapshot has not been restored and PostgreSQL recovery has not been
+tested.
+
+The Terraform backend bucket remains in `eu-central-1` with versioning enabled
+and AES256 server-side encryption. The EKS state object has historical
+versions and now represents an empty root; shared state still contains its
+three managed resources. The three ECR repositories, OIDC delivery role, and
+snapshot can incur ongoing storage charges. AWS Cost Explorer was available,
+but its service-level data through 2026-10-19 was delayed and showed near-zero
+unblended values/credits; it is not a zero-bill guarantee or resource-level
+cost attribution.
+
+The live EKS control plane was found to have drifted from Terraform: public
+access was enabled with `0.0.0.0/0`, despite the committed private-only
+configuration. Destroying the cluster removed the exposure. A future restore
+must use private administrator access and verify the live endpoint and
+security groups.
+
 ## CI, documentation, and repository hygiene
 
-**PASS** — [GitHub Actions run #177](https://github.com/EthemKesim/AfterPush/actions/runs/39223650940)
-for documentation commit `efd3d7a` completed successfully. `Legacy Demo
+**Historical baseline PASS** — [GitHub Actions run #178](https://github.com/EthemKesim/AfterPush/actions/runs/39226946946)
+for the previous Milestone 4 documentation commit `17bf79e` completed
+successfully. It is not a check of this final shutdown/documentation change.
+`Legacy Demo
 Application Validate`, `Platform Validate`, and `Terraform Validate` all
 passed. The Terraform job formatted, initialized and validated all three state
 roots, then scanned Terraform configuration; the Platform job completed
@@ -243,11 +347,13 @@ worker on an ordinary pull request. Actions are referenced by major-version
 tags rather than full commit SHAs; that is a supply-chain hardening opportunity
 to evaluate separately, not evidence that a live deployment ran.
 
-**PASS locally:** Markdown links were checked for repository-relative targets;
-`git diff --check` found no whitespace errors; no tracked `.env`, private key,
-Terraform state/plan, or credential file was found. Mermaid code fences and
-node/edge structure were reviewed statically, then GitHub rendered the README
-system diagram and both `docs/architecture.md` diagrams successfully in the
+**PASS for the final working tree:** a local checker found no broken relative
+Markdown links across 30 Markdown files; `git diff --check` found no whitespace
+errors; Trivy secret scanning found no findings; and both GitHub Actions YAML
+files parsed successfully. No tracked `.env`, private-key, Terraform
+state/plan, or credential-named file was found. Mermaid code fences and
+node/edge structure were also reviewed statically; GitHub previously rendered
+the README system diagram and both `docs/architecture.md` diagrams in the
 review branch preview.
 
 ```bash
@@ -267,9 +373,10 @@ Kubernetes runtime verification, activation of the reconciliation CronJob,
 remote GitOps publication, and production database migration were not
 performed. They remain intentionally unverified.
 
-**Release readiness: ready for final human review as a scoped `v1.0.0`
-portfolio prototype.** The project is well-tested and documented within the
-local, CI, static, and accepted-risk boundaries above. AWS-0164 is accepted
-only for the stated temporary single-operator scope; it is not a
-production-readiness claim. No tag, GitHub Release, merge, live Terraform
-operation, or EKS operation was created by this review.
+The project is documented as a scoped `v1.0.0` portfolio prototype, not a
+production platform. AWS-0164 remains a conditional source-design risk for
+any future EKS restore and is not a production-readiness claim. Live shutdown
+is verified; live EKS restore, Argo CD sync, and Kubernetes runtime health are
+not. GitHub check, merge, tag, and release status are time-sensitive and are
+reported separately from this dated validation evidence; verify the current
+state on [PR #90](https://github.com/EthemKesim/AfterPush/pull/90).

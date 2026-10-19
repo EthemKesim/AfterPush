@@ -175,6 +175,13 @@ CI does not run Terraform apply or destroy. The separate state roots allow
 shared delivery identity and image repositories to have a different lifecycle
 from an EKS cluster.
 
+The live EKS demo environment was shut down after the final ownership and
+destroy-plan review. Terraform's EKS state is now empty; the shared state and
+versioned S3 backend remain available for recovery. The PostgreSQL EBS volume
+was removed only after a completed encrypted snapshot was verified. This
+shutdown is live operational evidence, not evidence of a successful restore
+or production deployment.
+
 The image-delivery workflow is manually dispatched and assumes AWS access
 through GitHub OIDC. It builds and pushes the platform API and runtime-worker
 images to ECR. That workflow does not automatically apply Terraform or activate
@@ -208,6 +215,8 @@ temporary bare Git repository.
 Neither proof writes to GitHub, synchronizes Argo CD, calls an EKS cluster, or
 proves a live workload health result. Those boundaries make the demo
 repeatable and safe while keeping the live-delivery responsibilities visible.
+The separate live EKS shutdown is documented above; no restore or rollout has
+been verified.
 
 For operational detail, see the [publication runbook](runbooks/deployment-publication.md),
 [recovery runbook](runbooks/deployment-publication-recovery.md), and
