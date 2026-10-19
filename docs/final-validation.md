@@ -1,8 +1,8 @@
 # Final validation and release-readiness review
 
-**Review date:** 2026-10-18
-**Repository baseline:** `main` at `d9eeb0b` (Milestone 3 merge)
-**Review branch:** `codex/final-release-readiness`
+**Review date:** 2026-10-19
+**Repository baseline:** `main` at `69e2fd0` (merged PR #88)
+**Review branch:** `codex/final-security-remediation`
 
 This report records the final review evidence for the portfolio prototype. A
 result marked PASS proves only the stated local, CI, or static scope; it does
@@ -17,8 +17,9 @@ not prove a live AWS/EKS deployment.
 | Container builds and image scans | PASS | Local Docker and Trivy |
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
-| Terraform security configuration | FAIL | Static Trivy scan; findings below |
-| GitHub Actions for this review branch | PASS | GitHub Actions run #173 |
+| Terraform security configuration | BLOCKED | Static Trivy scan; one topology decision remains |
+| GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
+| GitHub Actions for this remediation branch | PENDING | PR has not been opened yet |
 | Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
 
 ## Automated tests
@@ -31,10 +32,19 @@ database only:
 ```bash
 DATABASE_URL=postgresql+psycopg://afterpush:afterpush_local_dev@127.0.0.1:5432/afterpush_test \
 TEST_DATABASE_URL=postgresql+psycopg://afterpush:afterpush_local_dev@127.0.0.1:5432/afterpush_test \
-platform/.venv/bin/python -m pytest platform/tests -q
+platform/.venv/bin/python -m pytest \
+  platform/tests/api platform/tests/demo platform/tests/engine \
+  platform/tests/infrastructure platform/tests/migrations -q
+
+DATABASE_URL=postgresql+psycopg://afterpush:afterpush_local_dev@127.0.0.1:5432/afterpush_test \
+TEST_DATABASE_URL=postgresql+psycopg://afterpush:afterpush_local_dev@127.0.0.1:5432/afterpush_test \
+platform/.venv/bin/python -m pytest \
+  platform/tests/deployments platform/tests/gitops -q
 ```
 
-Result: **816 passed, 1 warning in 29.92s**. This suite covers Alembic
+Result: **820 passed, 1 warning**. The environment's per-command time limit
+required two complete directory groups (492 and 328 tests), both against the
+same `afterpush_test` database. This suite covers Alembic
 migration paths, deployment revisions and promotion, prerequisite/namespace/
 RBAC gates, publication/recovery/stale-claim paths, runtime reconciliation,
 GitOps integration, CLI validation/rendering, local demo, and infrastructure
@@ -153,32 +163,45 @@ repositories (the required authorization-token action remains AWS-wide).
 
 ### Security configuration
 
-**FAIL — remediation decision required before a live release claim.** Trivy
-configuration scanning, excluding local `.terraform` caches, found these
-HIGH/CRITICAL findings in tracked Terraform source:
+**BLOCKED — no CRITICAL finding remains, but one operator topology decision is
+still required before a live-release claim.** Trivy 0.74.0 was run on an
+isolated copy of Terraform source. The copy excluded local provider caches,
+untracked state/backup files, and untracked `tfplan*` artifacts; none were
+modified or committed. This avoids treating an old plan snapshot as current
+source configuration.
 
-| Severity | Check | Static finding |
+```bash
+workdir=$(mktemp -d)
+rsync -a --exclude '.terraform' --exclude '*.tfstate' \
+  --exclude '*.tfstate.*' --exclude '*.tfplan' --exclude 'tfplan*' \
+  terraform/ "$workdir/terraform/"
+trivy config --severity HIGH,CRITICAL "$workdir/terraform"
+```
+
+| Check | Result | Decision and evidence |
 | --- | --- | --- |
-| CRITICAL | AWS-0040 / AWS-0041 | EKS API public endpoint is enabled with an open public CIDR. |
-| HIGH | AWS-0039 | EKS secret envelope encryption is not configured. |
-| HIGH | AWS-0164 | Public subnets assign public IPs by default. |
-| CRITICAL | AWS-0054 | A primary-stack ALB listener uses plaintext HTTP. |
-| HIGH | AWS-0053 | That primary-stack load balancer is internet-facing. |
-| HIGH | AWS-0136 | The SNS topic uses the AWS-managed SNS key instead of a customer-managed KMS key. |
+| AWS-0040 / AWS-0041 | RESOLVED | `terraform/eks/eks.tf` keeps private access on and explicitly sets `endpoint_public_access = false`; no administrator CIDR was invented. Operators need a reviewed VPC path such as VPN, bastion, or SSM before an apply. |
+| AWS-0039 | SCANNER LIMITATION | EKS Kubernetes 1.36 is constrained to 1.28+. AWS documents default envelope encryption for all Kubernetes API data at 1.28+, with an AWS-owned KMS key. The older customer-managed `encryption_config` pattern is deprecated for this version range, so it was not added solely to silence Trivy. [AWS EKS envelope encryption](https://docs.aws.amazon.com/eks/latest/userguide/envelope-encryption.html) |
+| AWS-0164 (two subnets) | CONDITIONAL RISK / BLOCKER | The managed node group still uses public subnets with automatic public IPv4 for bootstrap and image pulls. Disabling it safely requires an approved private-node route through NAT or VPC endpoints and changes recurring cost/connectivity. No such architecture was invented. |
+| AWS-0054 | RESOLVED | The legacy ECS ALB has only an HTTPS listener using an operator-supplied ACM certificate; plaintext HTTP was removed. |
+| AWS-0053 | RESOLVED | The legacy ECS ALB defaults to `internal`. Public mode requires an explicit selection and non-empty CIDR allowlist. |
+| AWS-0136 | RESOLVED | The alerts topic now uses a rotation-enabled customer-managed KMS key. The key policy permits only account-root administration, the named SNS topic, and the named CloudWatch alarm's required KMS actions. |
 
-These are static configuration findings, not proof that an AWS resource exists
-or is reachable. The EKS endpoint decision is intentionally not changed in
-this review because private-only access versus an allowlisted administrative
-CIDR changes the operator access model. Encryption, subnet, TLS, and KMS
-changes also require an explicit infrastructure design decision and an
-approved Terraform change. They must not be hidden by the passing format and
-validate checks.
+The clean-source scan reported exactly one AWS-0039 HIGH finding and two
+AWS-0164 HIGH findings; it reported **no CRITICAL findings**. The first is the
+documented scanner limitation above. The second is a real design trade-off and
+is not an automatically accepted risk. Focused infrastructure tests protect
+the private endpoint, modern-encryption assumption, explicit public-node
+trade-off, TLS-only/internal ALB default, public allowlist guard, SNS KMS key,
+and existing Terraform/CI state-boundary contracts.
 
 ## CI, documentation, and repository hygiene
 
-**PASS** — [GitHub Actions run #173](https://github.com/EthemKesim/AfterPush/actions/runs/39164255529)
+**PASS for the prior review branch** — [GitHub Actions run #173](https://github.com/EthemKesim/AfterPush/actions/runs/39164255529)
 for review commit `95636d2` completed successfully. `Legacy Demo Application
-Validate`, `Platform Validate`, and `Terraform Validate` all passed.
+Validate`, `Platform Validate`, and `Terraform Validate` all passed. The
+remediation branch CI result is intentionally recorded only after its PR is
+opened; it is not inferred from this local validation.
 
 Workflow source review confirms that CI is triggered only for pull requests to
 `main` and pushes to `main`. The ECR image-delivery workflow is
@@ -207,12 +230,15 @@ counts.
 
 ## Known limitations and release decision
 
-Live EKS deployment, Argo CD sync, Kubernetes runtime verification, activation
-of the reconciliation CronJob, remote GitOps publication, and production
-database migration were not performed. They remain intentionally unverified.
+Live EKS deployment, private API administrator access, Argo CD sync,
+Kubernetes runtime verification, activation of the reconciliation CronJob,
+remote GitOps publication, and production database migration were not
+performed. They remain intentionally unverified.
 
-**Release readiness: FAIL for a reviewed `v1.0.0` release today.** The project
-is a well-tested, documented portfolio prototype, but its Terraform security
-findings need an approved remediation or an explicit accepted-risk decision
-before it is represented as ready for live infrastructure use. This review
-does not create a tag, GitHub Release, or production-readiness claim.
+**Release readiness: BLOCKED for a reviewed `v1.0.0` release today.** The
+project is a well-tested, documented portfolio prototype, and its former
+critical Terraform defaults have been remediated. Before a live-infrastructure
+claim or Milestone 4 closure, the operator must either accept the documented
+public-node-subnet risk or approve a costed private-node/NAT-or-endpoint
+topology. This review does not create a tag, GitHub Release, or
+production-readiness claim.

@@ -151,11 +151,22 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
 4. **[x] README ve doğrulama kanıtı güncellemesi — Must-have**
    - README problem/değer açıklaması, doğru Argo CD–Helm ilişkisi, kısa gerçek
      local-demo kanıtı ve güncel validation raporu bağlantısıyla güncellendi.
-5. **[ ] Terraform security remediation veya açık accepted-risk kararı — Must-have**
-   - Trivy statik taraması EKS public endpoint/open CIDR, secret encryption,
-     public subnet, HTTP ALB listener ve SNS KMS alanlarında HIGH/CRITICAL
-     bulgular verdi. Erişim/topoloji kararları operator kapsamını etkilediği
-     için kullanıcı onayı olmadan değiştirilmeyecek.
+5. **[ ] Terraform security remediation ve açık operator kararı — Must-have**
+   - EKS public endpoint varsayılanı kapatıldı; private endpoint için VPN,
+     bastion veya SSM gibi VPC-içi bir yönetici erişim yolu gerekir.
+   - Legacy ECS ALB internal ve TLS-only varsayımına geçirildi. Public mod,
+     gerçek bir ACM sertifikası ile boş olmayan CIDR allowlist'ini açıkça
+     gerektirir; yerel Docker demo yolu sertifika gerektirmez.
+   - SNS alerts topic'i rotation-enabled customer-managed KMS key kullanır;
+     anahtar politikası yalnızca ilgili SNS topic'i ve target-5xx CloudWatch
+     alarmı için gereken KMS işlemlerini verir.
+   - EKS 1.36, AWS'nin 1.28+ default envelope encryption özelliğini kullanır.
+     Trivy'nin eski `encryption_config` kuralı bu sağlayıcı davranışını
+     tanımadığından bu bulgu scanner limitation olarak belgelenmiştir.
+   - EKS managed node'larının mevcut public-subnet bootstrap topolojisindeki
+     automatic public IP ataması hâlâ HIGH bulgudur. NAT/VPC endpoint ve
+     maliyet/bağlantı tasarımı olmadan kapatılamaz; kullanıcı açık risk kabulü
+     veya private-node topology kararı vermediği için bu must-have açıktır.
 6. **[x] Branch CI ve GitHub presentation doğrulaması — Must-have**
    - Review commit `95636d2` için GitHub Actions run #173 başarılı oldu:
      Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
@@ -165,9 +176,10 @@ Tüm otomatik testler, container security kontrolleri, Helm/Terraform doğrulama
 ### Kabul değerlendirmesi
 
 Milestone 4 henüz tamamlanmış değildir. Yerel kod, container, Helm ve
-Terraform syntax doğrulamaları ve branch CI başarılı olsa da canlı altyapı için
-kritik Terraform güvenlik bulguları çözülmemiş veya kabul edilmiş risk olarak
-kararlaştırılmamıştır. Ayrıntılı kanıt:
+Terraform syntax doğrulamaları başarılıdır; önceki CRITICAL Terraform
+bulguları kapatılmıştır. Ancak managed node'ların public IP topolojisi için
+operator kararı/risk kabulü olmadan canlı altyapı güvenlik kabulü verilemez.
+Ayrıntılı kanıt:
 [final validation report](../final-validation.md).
 
 Tamamlanma sonucu: aşağıdaki Definition of Done karşılanır.
@@ -184,3 +196,42 @@ AfterPush ancak şu koşullarda **FINAL RELEASE** sayılır:
 - Secret, credential, Terraform plan/state veya geçici çıktı commit edilmemiş olmalı.
 
 Bu noktadan sonra optional özellikler final release'i engellemez. Yalnızca kritik hata veya güvenlik sorunu bakım işi olarak ele alınır.
+
+## Milestone 5 — AWS Cost-Safe Shutdown & Restore (not started, future)
+
+Bu milestone Milestone 4 veya v1.0.0 portfolio release'ini engellemez. Amaç,
+AfterPush kullanılmadığında maliyetli AWS kaynaklarını operator onayıyla güvenle
+indirip/destroy edebilmek ve daha sonra aynı kontrollü akışla geri
+oluşturabilmektir. Bu kayıt yalnızca planlamadır; henüz script, Terraform
+apply/destroy veya canlı AWS işlemi yapılmamıştır.
+
+### Amaç ve görevler
+
+1. **[ ] Resource and cost inventory — Must-have**
+   - Üç Terraform root, ilgili region'lar ve Terraform dışı manuel kaynaklar
+     için sahiplik/maliyet envanteri çıkar; EKS, node group/EC2, ECS, ALB/NLB,
+     EBS, public IPv4/EIP, ECR, S3, DynamoDB, CloudWatch, SNS, Route 53, KMS
+     ve IAM/OIDC kaynaklarını cost davranışına göre sınıflandır.
+2. **[ ] Safe START/STOP design — Must-have**
+   - Provision, prerequisite, deploy/health, shutdown ve restore sırasını;
+     account, region, ownership, workspace/state, dry-run/plan ve açık
+     operator onayı kontrolleriyle belgele.
+3. **[ ] State, data and dependency preservation — Must-have**
+   - Terraform backend/state, GitOps, secret referansları, images/rebuild,
+     gerekli persistent data/backup ve disposable data ayrımını tanımla.
+   - Argo CD, AWS Load Balancer Controller, Kubernetes load balancer'ları,
+     node group, cluster, VPC ve IAM/OIDC bağımlılıklarının teardown/restore
+     sırasını doğrula; credential veya state Git'e ekleme.
+4. **[ ] Cost verification and non-destructive validation — Must-have**
+   - Retained storage, public IPv4, DNS, KMS ve logging residual cost'larını
+     doğrulama yolunu belgele; sıfır fatura iddiası yapma.
+   - Önce statik/mocked kontrol ve plan/dry-run kanıtı üret. Gerçek teardown
+     veya restore yalnızca ayrı açık onayla yapılır.
+
+### Kabul kriterleri
+
+- Kaynaklar ve olası residual cost'lar envanterlenmiş olmalı.
+- START/STOP prosedürü, state/data koruma ve bağımlı kaynak sırası
+  tekrarlanabilir biçimde belgelenmiş olmalı.
+- Destructive-operation güvenlik kontrolleri ve cost verification yolu
+  tanımlanmış olmalı; canlı kanıt simulated/dry-run kanıtından ayrılmalı.

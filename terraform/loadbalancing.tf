@@ -1,6 +1,6 @@
 resource "aws_lb" "main" {
   name                       = "launchforge-alb"
-  internal                   = false
+  internal                   = var.alb_access_mode == "internal"
   load_balancer_type         = "application"
   security_groups            = [aws_security_group.alb.id]
   drop_invalid_header_fields = true
@@ -13,6 +13,16 @@ resource "aws_lb" "main" {
   tags = {
     Name    = "${var.project_name}-alb"
     Project = var.project_name
+  }
+
+  lifecycle {
+    precondition {
+      condition = (
+        var.alb_access_mode == "internal" ||
+        length(var.public_alb_ingress_cidrs) > 0
+      )
+      error_message = "Public ALB access requires an explicit non-empty public_alb_ingress_cidrs allowlist."
+    }
   }
 }
 
@@ -58,10 +68,12 @@ resource "aws_lb_target_group" "api_green" {
   }
 }
 
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.main.arn
-  port              = 80
-  protocol          = "HTTP"
+  port              = 443
+  protocol          = "HTTPS"
+  certificate_arn   = var.acm_certificate_arn
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
 
   default_action {
     type             = "forward"
@@ -70,7 +82,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener_rule" "production" {
-  listener_arn = aws_lb_listener.http.arn
+  listener_arn = aws_lb_listener.https.arn
   priority     = 100
 
   action {

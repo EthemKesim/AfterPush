@@ -4,9 +4,9 @@
 
 **Milestone 4 — Final Validation & GitHub Presentation** devam ediyor. Yerel
 platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
-doğrulamaları tamamlandı. Ancak Terraform statik güvenlik taramasındaki
-HIGH/CRITICAL bulgular ile branch CI sonucu, release kararından önce açıkça
-ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
+doğrulamaları tamamlandı; public EKS endpoint, plaintext/public legacy ALB ve
+SNS KMS bulguları düzeltildi. EKS node subnetlerinin public-IP topolojisi için
+henüz operator risk kabulü veya private-network tasarım kararı yoktur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
@@ -73,18 +73,42 @@ ele alınmalıdır. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
   Legacy Demo Application Validate, Platform Validate ve Terraform Validate.
   README system architecture ve `docs/architecture.md` içindeki iki Mermaid
   diyagramı GitHub preview'da render edildi.
+- Final security-remediation branch'inde EKS API endpoint'i private-only
+  varsayıma geçirildi. EKS 1.36'nın AWS-managed default envelope encryption
+  davranışı resmi AWS dokümantasyonuyla doğrulandı; deprecated customer-managed
+  `encryption_config` yalnızca scanner'ı yeşile çevirmek için eklenmedi.
+- Legacy ECS ALB internal/TLS-only varsayıma geçti. Public exposure, gerçek
+  ACM certificate ARN'i ve non-empty CIDR allowlist olmadan planlanamaz.
+- SNS alerts topic'i key rotation açık customer-managed KMS key'e taşındı;
+  policy, yalnızca bağlı SNS topic ve target-5xx CloudWatch alarmı için
+  `Decrypt`/`GenerateDataKey*` izni verir.
+- Yeni Terraform security sözleşme testleri geçti. Temiz, state/plan içermeyen
+  kaynak kopyasında Trivy 0.74.0 taraması artık yalnızca AWS-0039 (EKS 1.28+
+  default encryption scanner limitation) ve iki AWS-0164 (public managed-node
+  subnet) HIGH bulgusunu gösteriyor; CRITICAL bulgu kalmadı.
+- Final doğrulamada platform suite, süre sınırı nedeniyle iki parçaya bölünerek
+  `820 passed` verdi. Legacy test/lint/build/audit, üç Docker image build ve
+  HIGH/CRITICAL image scan, Helm lint/template ve üç isolated Terraform root
+  validate başarılı oldu. Local demo ile temporary Git publication testleri
+  de geçti.
 
 ## Açık konular
 
 - Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile yapılır.
-- Terraform statik güvenlik bulguları, özellikle EKS public endpoint/open CIDR
-  ve encryption eksikliği, canlı release kararını engelliyor. Private-only
-  endpoint veya allowlisted yönetici CIDR seçimi kullanıcı onayı gerektiren
-  mimari karardır.
+- `terraform/eks/` managed node group'u public subnetlerde automatic public
+  IPv4 ile bootstrap ediyor. NAT/VPC endpoint gibi yeni maliyetli private-node
+  tasarımına geçmeden bu ayar kapatılamaz. Bu nedenle AWS-0164 için operator
+  risk kabulü veya onaylı topology değişikliği gerekir; Milestone 4 kapanmaz.
+- Live EKS apply, private API yönetici erişimi, Argo CD sync ve runtime
+  reconciliation hâlâ doğrulanmadı.
 
 ## Sıradaki öncelikler
 
-1. Terraform security findings için risk kabulü veya onaylı remediation
-   kapsamını belirlemek.
-2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+1. EKS public-node-subnet AWS-0164 bulgusu için risk kabulü veya costed
+   private-node topology kararını belirlemek.
+2. Milestone 4 PR CI sonucunu doğrulamak; yalnızca açık risk çözülürse
+   Milestone 4'ü kapatmak ve v1.0.0 release notunu hazırlamak.
+3. Milestone 5'te AWS cost-safe shutdown/restore tasarımını, canlı yıkıcı
+   işlem yapmadan önce planlamak.
+4. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.
