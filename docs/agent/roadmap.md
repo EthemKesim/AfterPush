@@ -204,32 +204,32 @@ AfterPush ancak şu koşullarda **FINAL RELEASE** sayılır:
 
 Bu noktadan sonra optional özellikler final release'i engellemez. Yalnızca kritik hata veya güvenlik sorunu bakım işi olarak ele alınır.
 
-## Milestone 5 — AWS Cost-Safe Shutdown & Restore (not started, future)
+## Milestone 5 — AWS Cost-Safe Shutdown & Restore (local safety implementation complete)
 
-Bu milestone Milestone 4 veya v1.0.0 portfolio release'ini engellemez. Amaç,
-AfterPush kullanılmadığında maliyetli AWS kaynaklarını operator onayıyla güvenle
-indirip/destroy edebilmek ve daha sonra aynı kontrollü akışla geri
-oluşturabilmektir. Bu kayıt yalnızca planlamadır; henüz script, Terraform
-apply/destroy veya canlı AWS işlemi yapılmamıştır.
+Bu milestone, AfterPush kullanılmadığında maliyetli AWS kaynaklarını operator
+onayıyla güvenle indirmek ve state-backed configuration ile geri oluşturmak
+için tamamlandı. `scripts/aws-env.sh` güvenli preview ile başlar; canlı
+Terraform veya Kubernetes işlemi bu repository tarafından gerçekleştirilmemiş
+ve ayrıca operator onayı gerektirir.
 
 ### Amaç ve görevler
 
-1. **[ ] Resource and cost inventory — Must-have**
+1. **[x] Resource and cost inventory — Must-have (tamamlandı)**
    - Üç Terraform root, ilgili region'lar ve Terraform dışı manuel kaynaklar
      için sahiplik/maliyet envanteri çıkar; EKS, node group/EC2, ECS, ALB/NLB,
      EBS, public IPv4/EIP, ECR, S3, DynamoDB, CloudWatch, SNS, Route 53, KMS
      ve IAM/OIDC kaynaklarını cost davranışına göre sınıflandır.
-2. **[ ] Safe START/STOP design — Must-have**
+2. **[x] Safe START/STOP design — Must-have (tamamlandı)**
    - Provision, prerequisite, deploy/health, shutdown ve restore sırasını;
      account, region, ownership, workspace/state, dry-run/plan ve açık
      operator onayı kontrolleriyle belgele.
-3. **[ ] State, data and dependency preservation — Must-have**
+3. **[x] State, data and dependency preservation — Must-have (tamamlandı)**
    - Terraform backend/state, GitOps, secret referansları, images/rebuild,
      gerekli persistent data/backup ve disposable data ayrımını tanımla.
    - Argo CD, AWS Load Balancer Controller, Kubernetes load balancer'ları,
      node group, cluster, VPC ve IAM/OIDC bağımlılıklarının teardown/restore
      sırasını doğrula; credential veya state Git'e ekleme.
-4. **[ ] Cost verification and non-destructive validation — Must-have**
+4. **[x] Cost verification and non-destructive validation — Must-have (tamamlandı)**
    - Retained storage, public IPv4, DNS, KMS ve logging residual cost'larını
      doğrulama yolunu belgele; sıfır fatura iddiası yapma.
    - Önce statik/mocked kontrol ve plan/dry-run kanıtı üret. Gerçek teardown
@@ -237,8 +237,23 @@ apply/destroy veya canlı AWS işlemi yapılmamıştır.
 
 ### Kabul kriterleri
 
-- Kaynaklar ve olası residual cost'lar envanterlenmiş olmalı.
-- START/STOP prosedürü, state/data koruma ve bağımlı kaynak sırası
-  tekrarlanabilir biçimde belgelenmiş olmalı.
-- Destructive-operation güvenlik kontrolleri ve cost verification yolu
-  tanımlanmış olmalı; canlı kanıt simulated/dry-run kanıtından ayrılmalı.
+- Kaynaklar ve olası residual cost'lar `docs/runbooks/aws-cost-safe-operations.md`
+  içinde üç Terraform root ve Terraform dışı/manual-review kaynaklarıyla
+  envanterlendi.
+- `scripts/aws-env.sh` `status`, `start`, `stop` ve `verify` komutlarını
+  sunar. Varsayılan davranış preview'dur; EKS stop normal destroy hedefidir,
+  shared ECR/OIDC/state asset'leri korunur, legacy primary root ayrıca
+  onay/backup kabulü olmadan reddedilir.
+- Execute yolu account/region, remote-state erişimi, state-based ownership,
+  exact confirmation, EKS data recovery acknowledgement ve ephemeral reviewed
+  Terraform plan gerektirir. Kayıp state, beklenmeyen adres veya hesap uyuşmazlığı
+  güvenli ret ile sonuçlanır.
+- Mock/test-double testleri dry-run, yanlış account, eksik state, partial
+  restore, dependency order, repeat stop, ownership belirsizliği ve plan
+  failure/retry sınırını doğrular. Canlı AWS/EKS/Argo CD restore kanıtı yoktur;
+  `verify --live` yalnızca read-only inventory üretir ve sıfır maliyet iddiası
+  yapmaz.
+
+Tamamlanma sonucu: Milestone 5'in kod ve dokümantasyon kabul kriterleri yerel
+olarak karşılandı. v1.0.0 için son PR CI sonucu ve insan incelemesi gerekir;
+tag veya GitHub Release henüz oluşturulmaz.

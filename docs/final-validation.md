@@ -1,8 +1,8 @@
 # Final validation and release-readiness review
 
 **Review date:** 2026-10-19
-**Repository baseline:** `main` at `69e2fd0` (merged PR #88)
-**Review branch:** `codex/final-security-remediation`
+**Repository baseline:** `main` at `3c14b7f` (merged PR #89)
+**Review branch:** `codex/aws-cost-safe-operations`
 
 This report records the final review evidence for the portfolio prototype. A
 result marked PASS proves only the stated local, CI, or static scope; it does
@@ -18,6 +18,7 @@ not prove a live AWS/EKS deployment.
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
 | Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
 | Terraform security configuration | PASS — scoped acceptance | Static Trivy scan plus documented single-operator risk acceptance |
+| AWS lifecycle safety tool | PASS — local/mock scope | State-backed preview/guard tests; no live AWS operation |
 | GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
 | GitHub Actions for this remediation branch | PASS | CI run #177: all three required jobs succeeded |
 | Live AWS/EKS, Argo CD, and runtime reconciliation | NOT VERIFIED | Intentionally not contacted |
@@ -224,10 +225,51 @@ and, where appropriate, a costed private-node design using NAT gateways and/or
 VPC endpoints. This acceptance does not authorize a live Terraform apply, EKS
 operation, or data migration.
 
+## Cost-safe shutdown and restore
+
+**PASS for local safety behavior; live AWS/EKS behavior remains unverified.**
+`scripts/aws-env.sh` exposes `status`, `start`, `stop`, and `verify`. Without
+`--live` or `--execute`, each command is a source-only preview and does not
+contact AWS, a Terraform backend, Kubernetes, or a database.
+
+The normal lifecycle keeps `terraform/shared/` ECR repositories and the GitHub
+OIDC role as recovery assets, protects the Terraform S3 state bucket, and
+limits normal destroy eligibility to the EKS root. It refuses a destructive
+operation unless the account ID and `eu-central-1` region match, remote state
+is readable, state addresses establish ownership, the exact confirmation word
+is supplied, and EKS teardown acknowledges data/secrets recovery. The legacy
+primary root remains outside the normal stop path because it contains a
+force-delete ECR repository; it needs separate legacy and image-backup
+acknowledgements.
+
+`verify --live` is deliberately read-only. It inventories EKS, EC2/EBS, ECS,
+VPC/subnet/route/security-group candidates, NAT gateways, public IPv4/EIPs,
+load balancers/target groups, ECR, state-bucket access, CloudWatch, SNS, KMS,
+and Route 53, then marks any non-state-owned candidate for manual review. It
+does not run a broad cleanup command and cannot prove that an AWS bill is zero.
+
+The local contract suite covered safe preview, start confirmation, wrong AWS
+account, missing state, repeated stop against an empty state, retained shared
+assets, dependency ordering, partial-state planning, unknown ownership, and
+plan-failure recovery boundaries. Result: **12 passed** for the new lifecycle
+tool tests; **16 passed, 1 warning** with the existing Terraform security
+contract tests. The warning is the existing Starlette `TestClient`/`httpx`
+deprecation warning. The final affected `platform/tests/infrastructure` suite
+also passed: **424 passed, 1 warning**, using only `afterpush_test`.
+
+The tool can recreate state-backed infrastructure from a reviewed Terraform
+plan, but it does not bootstrap Argo CD or assert Kubernetes application
+health. After a restored EKS cluster, the operator must use private API access,
+provide secrets out of band, and follow the existing disaster-recovery runbook
+to bootstrap Argo CD and observe GitOps reconciliation. No live account,
+Terraform backend, Kubernetes cluster, or production database was contacted
+for this review.
+
 ## CI, documentation, and repository hygiene
 
-**PASS** — [GitHub Actions run #177](https://github.com/EthemKesim/AfterPush/actions/runs/39223650940)
-for documentation commit `efd3d7a` completed successfully. `Legacy Demo
+**PASS** — [GitHub Actions run #178](https://github.com/EthemKesim/AfterPush/actions/runs/39226946946)
+for the final Milestone 4 documentation commit `17bf79e` completed
+successfully. `Legacy Demo
 Application Validate`, `Platform Validate`, and `Terraform Validate` all
 passed. The Terraform job formatted, initialized and validated all three state
 roots, then scanned Terraform configuration; the Platform job completed
@@ -267,9 +309,11 @@ Kubernetes runtime verification, activation of the reconciliation CronJob,
 remote GitOps publication, and production database migration were not
 performed. They remain intentionally unverified.
 
-**Release readiness: ready for final human review as a scoped `v1.0.0`
-portfolio prototype.** The project is well-tested and documented within the
-local, CI, static, and accepted-risk boundaries above. AWS-0164 is accepted
-only for the stated temporary single-operator scope; it is not a
-production-readiness claim. No tag, GitHub Release, merge, live Terraform
-operation, or EKS operation was created by this review.
+**Release readiness: ready for Milestone 5 branch CI and final human review as
+a scoped `v1.0.0` portfolio prototype.** The project is well-tested and
+documented within the local, CI, static, and accepted-risk boundaries above.
+AWS-0164 is accepted only for the stated temporary single-operator scope; it
+is not a production-readiness claim. No tag, GitHub Release, live Terraform
+operation, or EKS operation was created by this review. The Milestone 5 commit
+must still receive the ordinary three-job PR CI result before a final merge
+decision.

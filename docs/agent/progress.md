@@ -2,13 +2,12 @@
 
 ## Mevcut milestone
 
-**Milestone 4 — Final Validation & GitHub Presentation** tamamlandı. Yerel
-platform, legacy uygulama, container, Helm/GitOps ve Terraform syntax
-doğrulamaları tamamlandı; public EKS endpoint, plaintext/public legacy ALB ve
-SNS KMS bulguları düzeltildi. AWS-0164 public-node-subnet riski 2026-10-19'da
-yalnızca kişisel, geçici, single-operator test/demo/portfolio ortamı için
-koşullu kabul edildi. Bu production veya canlı EKS güvenlik kanıtı değildir.
-Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
+**Milestone 5 — AWS Cost-Safe Shutdown & Restore** yerel güvenlik kapsamıyla
+tamamlandı. Milestone 4'ün koşullu AWS-0164 kabulü korunur; bu production veya
+canlı EKS güvenlik kanıtı değildir. Yeni operator aracı varsayılan preview,
+state-backed ownership ve açık execute onayıyla çalışır; canlı AWS/EKS/Argo CD
+restore çalıştırılmadı. v1.0.0, branch CI ve insan incelemesinden sonra final
+review'e hazır olur. Ayrıntılı plan: [roadmap.md](roadmap.md); kanıt:
 [final-validation.md](../final-validation.md).
 
 ## Tamamlananlar
@@ -101,8 +100,22 @@ Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); ka
   operator tarafından doğrulanmalıdır. Kapsam/topoloji değişirse yeni güvenlik
   incelemesi ve private-node tasarımı gerekir.
 - Milestone 4'ün must-have kabul kriterleri bu sınırlı risk kabulü ve mevcut
-  yerel/CI/statik kanıtla tamamlandı; Milestone 5 future plan olarak kaldı ve
-  uygulanmaya başlanmadı.
+  yerel/CI/statik kanıtla tamamlandı. Sonraki Milestone 5 planı daha sonra
+  yerel güvenlik kapsamıyla uygulandı; canlı restore kanıtı üretilmedi.
+- `scripts/aws-env.sh` ile `status`, `start`, `stop` ve `verify` operator
+  arayüzü eklendi. Varsayılan komutlar AWS, Terraform backend, Kubernetes veya
+  database'e dokunmayan preview üretir.
+- EKS stop yalnızca state-backed `terraform/eks/` için destroy-eligible'dır.
+  Shared ECR/OIDC ve Terraform state asset'leri retain edilir; legacy primary
+  root force-delete ECR içerdiği için açık legacy/backup kabulü olmadan
+  reddedilir.
+- Live/read-only inventory için account ID zorunludur. Her execute yolu doğru
+  account/region, erişilebilir state, bilinen state adresleri, exact START/STOP
+  onayı ve EKS için data recovery acknowledgement ister. Yerel test doubles
+  ile 12 yeni lifecycle safety testi geçti; canlı AWS çağrısı yapılmadı.
+- Milestone 5 local acceptance tamamlandı. Argo CD bootstrap ve runtime health
+  script tarafından başarılı gösterilmez; private erişimden mevcut disaster
+  recovery runbook'u izlenir ve live verification ayrı operator onayı ister.
 
 ## Açık konular
 
@@ -113,14 +126,16 @@ Milestone 5 **başlatılmadı**. Ayrıntılı plan: [roadmap.md](roadmap.md); ka
   reconciliation hâlâ doğrulanmadı. Böyle bir canlı kullanımda AWS-0164 kabul
   şartları (özellikle EKS-managed security group incelemesi, geçici scope ve
   hassas veri yasağı) uygulanmalıdır.
+- `terraform/` legacy root'u ECS/ALB yanında `force_delete` ECR içerir. Normal
+  stop akışının dışında tutulmuştur; tamamen kapatma ancak ayrıca incelenmiş
+  image backup ve açık operator onayıyla ele alınabilir.
 
 ## Sıradaki öncelikler
 
-1. Milestone 4 PR CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
+1. Milestone 5 branch CI sonucunu doğrulamak ve kullanıcı isterse PR'ı insan
    incelemesiyle merge etmek. Tag/release oluşturmak ayrı açık onay ister.
-2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını ve private API
-   administrator path'ini doğrulamak; bu mevcut risk kabulünün yerine geçmez.
-3. Milestone 5'te AWS cost-safe shutdown/restore tasarımını, canlı yıkıcı
-   işlem yapmadan önce planlamak. Milestone 5 henüz başlamamıştır.
-4. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
+2. Canlı AWS/EKS kullanımı düşünülürse önce AWS-0164 koşullarını, private API
+   administrator path'ini, data/secrets recovery planını ve resource ownership'i
+   doğrulamak; bu mevcut risk kabulünün yerine geçmez.
+3. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.

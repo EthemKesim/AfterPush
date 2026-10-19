@@ -146,6 +146,25 @@ Validation evidence is dated and scoped in the
 permanent test-count claim. That report distinguishes local, CI, static, and
 live-environment evidence and links each outcome to a reproducible command.
 
+## Cost-safe AWS operations
+
+For the optional AWS prototype environment, a state-backed operator tool
+provides safe previews before any cloud action:
+
+```bash
+./scripts/aws-env.sh status
+./scripts/aws-env.sh start --dry-run
+./scripts/aws-env.sh stop --dry-run
+./scripts/aws-env.sh verify
+```
+
+It retains shared ECR/OIDC recovery assets, limits normal teardown to the EKS
+Terraform state root, and requires an explicit account/region check,
+confirmation, data-recovery acknowledgement, and reviewed Terraform plan for
+any live action. The [cost-safe AWS operations runbook](docs/runbooks/aws-cost-safe-operations.md)
+explains live read-only inventory, restore boundaries, residual costs, and why
+the tool never promises a zero AWS bill.
+
 ## Further documentation
 
 - [Technical architecture](docs/architecture.md)
@@ -159,6 +178,8 @@ live-environment evidence and links each outcome to a reproducible command.
 - [Runtime reconciliation runbook](docs/runbooks/runtime-reconciliation.md)
 - [Platform API metrics runbook](docs/runbooks/platform-api-metrics.md)
 - [Network policy validation runbook](docs/runbooks/network-policy-validation.md)
+- [Cost-safe AWS operations](docs/runbooks/aws-cost-safe-operations.md)
+- [v1.0.0 draft release summary](docs/releases/v1.0.0-draft.md)
 
 ## Scope and current boundaries
 
