@@ -16,6 +16,22 @@ variable "cluster_name" {
   default     = "afterpush-eks"
 }
 
+variable "temporary_operator_public_access_cidrs" {
+  description = "Exactly one operator IPv4 /32 temporarily allowed to reach the EKS public API; do not commit a real address."
+  type        = list(string)
+
+  validation {
+    condition = (
+      length(var.temporary_operator_public_access_cidrs) == 1 &&
+      alltrue([
+        for cidr in var.temporary_operator_public_access_cidrs :
+        can(cidrhost(cidr, 0)) && endswith(cidr, "/32")
+      ])
+    )
+    error_message = "Provide exactly one valid IPv4 /32 CIDR for temporary operator access."
+  }
+}
+
 variable "kubernetes_version" {
   description = "Kubernetes version used by the EKS cluster. EKS 1.28+ provides default envelope encryption for Kubernetes API data."
   type        = string

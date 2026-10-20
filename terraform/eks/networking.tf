@@ -33,6 +33,7 @@ resource "aws_subnet" "public_a" {
 
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/elb"                    = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
   }
 }
 
@@ -49,6 +50,7 @@ resource "aws_subnet" "public_b" {
 
     "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     "kubernetes.io/role/elb"                    = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
   }
 }
 

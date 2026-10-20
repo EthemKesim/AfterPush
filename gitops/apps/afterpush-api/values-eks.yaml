@@ -2,7 +2,7 @@ application:
   name: afterpush-api
 image:
   repository: 833090513321.dkr.ecr.eu-central-1.amazonaws.com/afterpush-api
-  tag: cb861fe5538164d73e358b26722adc66384f899e
+  tag: temporary-eks-demo-dc5b434754
   pullPolicy: IfNotPresent
 service:
   type: ClusterIP

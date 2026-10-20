@@ -1,6 +1,37 @@
 # Agent çalışma ilerlemesi
 
-## Mevcut milestone
+## Mevcut çalışma
+
+Final release milestone'ları kapanmış durumdadır. Ayrı ve geçici bir
+single-operator EKS/Argo CD screenshot demonstrasyonu başlatıldı; bu yeni bir
+ürün milestone'u değildir. 2026-10-20'de `terraform` profiliyle hesap
+`833090513321` ve `eu-central-1` doğrulandı. EKS `afterpush-eks` is `ACTIVE`
+(Kubernetes 1.36), its managed node group has one running `c7i-flex.large`
+node, and the Terraform state contains the expected 23 managed resources.
+Terraform plan with the current operator CIDR (`109.175.77.4/32`) reported no
+changes. Both cluster subnets already have the `kubernetes.io/role/internal-elb`
+tag; the internal ALB is active, so no Terraform apply or subnet-tag mutation
+was needed.
+
+AWS Load Balancer Controller and Argo CD are running. The first GitOps sync
+created the API Deployment, Service, Ingress, and HPA, but the old ECR image
+failed Kubernetes `runAsNonRoot` because that image's configured user is root.
+The current `platform/Dockerfile.api` sets numeric UID `10001`. A fresh
+`linux/amd64` image built from it passed a local `/health` smoke test and was
+published as the immutable ECR tag
+`temporary-eks-demo-dc5b434754` (digest
+`sha256:39411062c22b7e9f0e133e0af075be8718313a1687e3a34e184bd6953726ed99`).
+Image scan results were not yet available at this checkpoint.
+
+The existing GitOps metrics-server Application was registered; it is
+`Synced`/`Healthy`, the metrics APIService reports `Available`, and `kubectl
+top nodes` returns metrics. The API still needs the temporary branch to be
+published and selected by its Argo CD Application before the changed image can
+be synchronized. After that, verify HPA metrics, application health, internal
+ALB target health, and final `Healthy`/`Synced` status. Keep the AWS environment
+running until the operator confirms screenshot capture is complete.
+
+## Son tamamlanan milestone
 
 **Milestone 5 — AWS Cost-Safe Shutdown & Restore** tamamlandı: canlı EKS
 altyapısı state-backed planla kapatıldı ve PostgreSQL verisi için şifreli
@@ -136,13 +167,14 @@ kanıt: [final-validation.md](../final-validation.md).
 
 ## Açık konular
 
-- Canlı EKS worker aktivasyonu için immutable image digest, secret, config ve
-  RBAC hazırlığı gerekir. CD image yayınlama manuel workflow dispatch ile
-  yapılır.
-- Live EKS apply, private API yönetici erişimi, Argo CD sync ve runtime
-  reconciliation hâlâ doğrulanmadı. Böyle bir canlı kullanımda AWS-0164 kabul
-  şartları (özellikle EKS-managed security group incelemesi, geçici scope ve
-  hassas veri yasağı) uygulanmalıdır.
+- Temporary demo için public EKS API allowlist'i yalnızca operatörün güncel
+  `/32` adresidir; private endpoint de açıktır. Bu istisna teardown sırasında
+  kaldırılmalıdır. API ve ALB internal kalmalıdır.
+- ECR tag taraması henüz tamamlanmadı. EKS HPA, ALB target health ve API
+  deployment'ının yeni image ile runtime health doğrulaması bekleniyor.
+- Screenshot onayından sonra geçici EKS altyapısı ayrı, güncel ve gözden
+  geçirilmiş destroy planıyla kapatılacak; bu çalışma sırasında hiçbir teardown
+  yapılmayacaktır.
 - `terraform/` legacy root'u ECS/ALB yanında `force_delete` ECR içerir. Normal
   stop akışının dışında tutulmuştur; tamamen kapatma ancak ayrıca incelenmiş
   image backup ve açık operator onayıyla ele alınabilir.

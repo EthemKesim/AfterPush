@@ -4,12 +4,18 @@ The EKS root is deliberately separate from the primary and shared Terraform
 state roots. It is an apply-time AWS configuration, not part of the local
 demo.
 
-## Private control-plane access
+## Control-plane access
 
-The secure default enables the private EKS API endpoint and disables the
-public endpoint. Before applying it, provide a VPC-based administrative path,
-such as a reviewed VPN, bastion host, or SSM-managed host. This repository does
-not invent a public administrator CIDR or create an access path automatically.
+Private EKS API access is always enabled. The normal profile should keep the
+public endpoint disabled and use a VPC-based administrative path, such as a
+reviewed VPN, bastion host, or SSM-managed host.
+
+For the explicitly approved, short-lived single-operator screenshot demo, the
+root also supports public API access restricted to **exactly one** operator
+IPv4 `/32` through `temporary_operator_public_access_cidrs`. Terraform rejects
+an empty list, multiple CIDRs, and broader networks. The real address is local
+operator input, is ignored by Git, and must be removed again during teardown.
+It must never be changed to `0.0.0.0/0`.
 
 ## Kubernetes API-data encryption
 
@@ -49,8 +55,9 @@ been secured or verified.
 
 ### Controls enforced by source configuration
 
-- The EKS Kubernetes API endpoint is private-only; its public endpoint is
-  disabled in `eks.tf`.
+- Private EKS Kubernetes API access remains enabled. A public endpoint is
+  allowed only for the approved temporary demo, and only for the single `/32`
+  supplied at apply time.
 - This root does not configure `remote_access` or an SSH key for the managed
   node group.
 - The EKS GitOps values express an internal ALB and a `ClusterIP` platform
@@ -66,8 +73,9 @@ been secured or verified.
 - Keep the environment temporary and single-operator; do not place sensitive
   data in it. Use a separately reviewed private-node design for any broader or
   longer-lived use.
-- Confirm a private administrator path for the EKS API (for example VPN,
-  bastion, or SSM) before applying the private endpoint configuration.
+- For the normal private-only profile, confirm a private administrator path for
+  the EKS API (for example VPN, bastion, or SSM). The temporary `/32` exception
+  is limited to the approved screenshot demo and is removed during teardown.
 
 The acceptance must be reviewed again before production use, public exposure,
 multi-user access, sensitive-data processing, a topology change, or extending

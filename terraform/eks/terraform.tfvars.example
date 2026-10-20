@@ -3,6 +3,10 @@ aws_profile        = "terraform"
 cluster_name       = "afterpush-eks"
 kubernetes_version = "1.36"
 
+# Temporary single-operator demo only. Keep private API access enabled and
+# supply exactly one current operator IPv4 address; never commit a real IP.
+temporary_operator_public_access_cidrs = ["203.0.113.10/32"]
+
 node_instance_types = ["t3.small"]
 
 node_desired_size = 1

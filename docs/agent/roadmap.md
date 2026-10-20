@@ -204,6 +204,28 @@ AfterPush ancak şu koşullarda **FINAL RELEASE** sayılır:
 
 Bu noktadan sonra optional özellikler final release'i engellemez. Yalnızca kritik hata veya güvenlik sorunu bakım işi olarak ele alınır.
 
+## Geçici canlı demo notu (2026-10-20)
+
+Final release kapsamı genişletilmeden, LinkedIn için gerçek EKS/Argo CD
+screenshots üretmek için kısa ömürlü single-operator demonstrasyonu
+yürütülmektedir. Bu bir Milestone 6 değildir. Demo yalnızca `terraform/eks`
+state root'unu kullanır; shared ve legacy root'lar kapsam dışıdır. 2026-10-20
+itibarıyla EKS `ACTIVE`, tek worker node çalışıyor ve state beklenen 23 managed
+kaynağı içeriyor. Güncel operator `/32` ile Terraform planı `No changes`
+verdi; internal ALB subnet tag'leri canlıda bulunduğu için ek bir Terraform
+uygulaması gerekmedi.
+
+İlk Argo CD sync'i `Synced` fakat `Degraded` oldu: mevcut ECR image'ı
+`runAsNonRoot` ile uyumsuzdu. UID `10001` kullanan API image'ı immutable ECR
+tag'i `temporary-eks-demo-dc5b434754` ile yayımlandı. Metrics-server mevcut
+GitOps Application'ı üzerinden kuruldu ve metrics API kullanılabilir hale
+geldi. Uygulama GitOps değerleri geçici `codex/temporary-eks-demo` branch'inde
+yayınlanacak; demo Application bu branch'i izler, `main` değiştirilmeyecek.
+
+Screenshot'lar tamamlandığı operator tarafından onaylanana kadar kaynaklar
+açık kalacaktır. Sonrasında güncel state ve tam kapsamı doğrulanmış ayrı bir
+destroy planı gerekir; bu not tek başına teardown yetkisi vermez.
+
 ## Milestone 5 — AWS Cost-Safe Shutdown & Restore (shutdown complete; live restore unverified)
 
 Bu milestone, canlı AfterPush EKS altyapısının güvenli şekilde kapatılması ve

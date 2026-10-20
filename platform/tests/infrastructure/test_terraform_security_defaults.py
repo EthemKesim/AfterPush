@@ -11,12 +11,17 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_eks_profile_is_private_only_and_requires_modern_default_encryption():
+def test_eks_profile_keeps_private_access_and_limits_temporary_public_access_to_one_operator_cidr():
     cluster = _read(EKS_ROOT / "eks.tf")
     variables = _read(EKS_ROOT / "variables.tf")
 
     assert "endpoint_private_access = true" in cluster
-    assert "endpoint_public_access = false" in cluster
+    assert "endpoint_public_access = true" in cluster
+    assert "public_access_cidrs" in cluster
+    assert "var.temporary_operator_public_access_cidrs" in cluster
+    assert "temporary_operator_public_access_cidrs" in variables
+    assert "length(var.temporary_operator_public_access_cidrs) == 1" in variables
+    assert 'endswith(cidr, "/32")' in variables
     assert "requires Kubernetes 1.28 or later" in variables
     assert 'default     = "1.36"' in variables
     assert "encryption_config" not in cluster
@@ -27,6 +32,7 @@ def test_public_node_addresses_are_an_explicit_documented_topology_tradeoff():
     documentation = _read(EKS_ROOT / "README.md")
 
     assert networking.count("map_public_ip_on_launch = true") == 2
+    assert networking.count('"kubernetes.io/role/internal-elb"') == 2
     assert "managed node group currently runs in the two public subnets" in documentation
     assert "NAT gateways or\ninterface endpoints" in documentation
 
