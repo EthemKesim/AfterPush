@@ -1,12 +1,14 @@
-# Temporary EKS demo evidence
+# Temporary EKS demo and teardown evidence
 
 Verification date: 2026-10-20 (Europe/Istanbul)
 AWS account: `833090513321`
 Region: `eu-central-1`
 Cluster: `afterpush-eks`
 
-This is a temporary screenshot demo, not a production-readiness claim. The
-environment must remain running until the operator confirms screenshot capture.
+This was a short-lived single-operator screenshot demo, not a
+production-readiness claim. It reached the verified state below and was then
+destroyed on 2026-10-20. This record does not assert that screenshots were
+captured or that a live restore was tested.
 
 ## Infrastructure and access
 
@@ -26,8 +28,8 @@ environment must remain running until the operator confirms screenshot capture.
 ## GitOps and workload
 
 - Temporary branch: `codex/temporary-eks-demo`.
-- Branch head and Argo CD source revision at final verification:
-  `c0f172899128ffb7f733974530d35b43a071a2f2`.
+- Branch head and Argo CD source revision at final healthy verification:
+  `992f4da97450c52689a5d3df4a8649b4e3230a7e`.
 - Initial workload deployment commit:
   `ca0d08e56c3a4551df4f74d446501ef022ca438d`.
 - The Argo CD Application's chart and values sources both follow this temporary
@@ -47,6 +49,11 @@ environment must remain running until the operator confirms screenshot capture.
   ```
 
 - `/metrics` returned Prometheus metrics.
+
+The temporary API manifest used `codex/temporary-eks-demo`; after teardown,
+the repository manifest was restored to `main` so future GitOps restores use
+the release branch. The EKS Terraform source was restored to its private-only
+control-plane default. No temporary public `/32` was committed.
 
 ## Immutable image
 
@@ -71,21 +78,45 @@ environment must remain running until the operator confirms screenshot capture.
   immutable image tag, and HPA were present in rendered manifests.
 - Docker image UID and `/health` smoke checks: passed.
 
-## Remaining AWS resources and cost exposure
+## Teardown and remaining cost exposure
 
-The active demo includes the EKS control plane, one managed `c7i-flex.large`
-worker, its 20 GiB gp3 root EBS volume, the demo VPC/subnets/Internet Gateway,
-an automatically assigned public IPv4 address on the worker, and an internal
-Application Load Balancer with a target group. EKS control-plane hours,
-EC2 hours, public IPv4 hours, EBS storage, ALB hours/LCUs, and data transfer can
-continue to incur charges. There is no NAT Gateway or allocated Elastic IP.
-At published list rates, a rough 730-hour baseline is about `$169/month`:
-approximately `$73` for standard-support EKS cluster hours, `$70.63` for the
-worker, `$1.90` for its 20 GiB gp3 volume, `$3.65` for its in-use public IPv4,
-and `$19.71` for the ALB hourly charge. This excludes ALB LCU usage, traffic,
-logs, and other variable usage; it is not a bill or a credit-adjusted estimate.
+Before Terraform teardown, the `afterpush-api` Ingress was deleted through
+Kubernetes. Its controller removed the internal ALB
+`k8s-afterpus-afterpus-33c26d969e` and target group
+`k8s-afterpus-afterpus-6cb49e323a`. AWS tags linked both to
+`afterpush-eks` and `afterpush-dev/afterpush-api`. The Terraform plan was
+reviewed as exactly `0 add, 0 change, 23 destroy`, then executed with the
+guarded `scripts/aws-env.sh` stop command.
 
-The existing encrypted PostgreSQL recovery snapshot, Terraform state and
-shared ECR repositories remain outside the demo cleanup scope and must be
-preserved. The demo stays active until the operator confirms screenshot
-completion; any later teardown requires a fresh plan and explicit approval.
+Post-teardown checks found no EKS cluster, running EC2 instance, EBS volume,
+demo ALB/target group, demo VPC/subnet/Internet Gateway, NAT Gateway, or
+allocated Elastic IP in `eu-central-1`. The EKS Terraform state is empty.
+Shared state still has three managed resources. No Terraform state or ECR
+image was deleted.
+
+The requested snapshot ID `snap-026638e6765e0067c` was not found in
+`eu-central-1`. The verified PostgreSQL recovery snapshot
+`snap-04c0bf420fd3f6715` remains `completed`, encrypted, 5 GiB, and sourced
+from `vol-029214c0cf7f20222`. Its restore has not been tested.
+
+Three ECR repositories remain with 15 image manifests; their reported
+`imageSizeInBytes` sum is 777,307,835 bytes (about 0.724 GiB before layer
+deduplication). The versioned Terraform S3 bucket retains 164 object versions
+with 2,635,331 bytes reported across those versions; the current EKS state
+object is 476 bytes and server-side encrypted. These assets can incur storage
+charges.
+
+One CloudWatch log group, `/vpc/afterpush/flow-logs`, remains with 1,311 bytes,
+no tags, and no retention policy. The Terraform source defines a 30-day policy,
+but the live group has no configured expiry. No active VPC Flow Log producer
+was found. It was not deleted because it is outside the EKS state root and its
+audit-retention need has not been confirmed.
+
+Cost Explorer's available 2026-10-01 through 2026-10-19 account-level data
+showed `$46.8076168713` Usage and `-$46.8076169982` Credit. It is delayed,
+not resource-attributed, and does not prove a zero bill. A rough retained
+storage-only estimate is about `$0.25–$0.33/month` before traffic, requests,
+regional price differences, and snapshot incremental-block accounting. The
+snapshot, ECR, S3 history, and log-group storage are the remaining known
+AfterPush storage exposures; active demo compute/networking charges were
+removed.

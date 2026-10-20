@@ -295,13 +295,14 @@ def live_inventory(args: argparse.Namespace) -> None:
         ("security group candidates", ["ec2", "describe-security-groups", "--filters", "Name=tag:Project,Values=afterpush,AfterPush", "--output", "json"]),
         ("EC2 instances", ["ec2", "describe-instances", "--filters", "Name=tag:Project,Values=afterpush,AfterPush", "--output", "json"]),
         ("EBS volumes", ["ec2", "describe-volumes", "--filters", "Name=tag:Project,Values=afterpush,AfterPush", "--output", "json"]),
+        ("EBS snapshots (account-owned; review ownership)", ["ec2", "describe-snapshots", "--owner-ids", "self", "--output", "json"]),
         ("NAT gateways", ["ec2", "describe-nat-gateways", "--filter", "Name=tag:Project,Values=afterpush,AfterPush", "--output", "json"]),
         ("Elastic IPs/public IPv4 candidates", ["ec2", "describe-addresses", "--output", "json"]),
         ("load balancer candidates", ["elbv2", "describe-load-balancers", "--output", "json"]),
         ("target group candidates", ["elbv2", "describe-target-groups", "--output", "json"]),
         ("ECR repositories (account-wide; review ownership)", ["ecr", "describe-repositories", "--output", "json"]),
         ("Terraform state bucket", ["s3api", "head-bucket", "--bucket", "afterpush-terraform-state-833090513321"]),
-        ("CloudWatch log groups", ["logs", "describe-log-groups", "--log-group-name-prefix", "/aws", "--output", "json"]),
+        ("CloudWatch log groups (account-wide; review ownership)", ["logs", "describe-log-groups", "--output", "json"]),
         ("CloudWatch alarms", ["cloudwatch", "describe-alarms", "--alarm-name-prefix", "afterpush", "--output", "json"]),
         ("SNS topics", ["sns", "list-topics", "--output", "json"]),
         ("KMS aliases", ["kms", "list-aliases", "--output", "json"]),
@@ -325,7 +326,13 @@ def live_inventory(args: argparse.Namespace) -> None:
 
 def preview(args: argparse.Namespace, roots: list[TerraformRoot] | None = None) -> None:
     validate_source_layout(args.repo_root)
-    emit(f"Mode: safe preview. Region contract: {EXPECTED_REGION}. No AWS, Kubernetes, Terraform backend, or remote state was contacted.")
+    if args.live:
+        emit(
+            f"Mode: read-only AWS inventory. Region contract: {EXPECTED_REGION}. "
+            "AWS APIs are queried; no AWS resources, Terraform state, or Kubernetes objects are modified."
+        )
+    else:
+        emit(f"Mode: safe preview. Region contract: {EXPECTED_REGION}. No AWS, Kubernetes, Terraform backend, or remote state was contacted.")
     if roots:
         emit("Targets: " + ", ".join(root.key for root in roots))
         for root in roots:

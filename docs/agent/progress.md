@@ -2,47 +2,46 @@
 
 ## Mevcut çalışma
 
-Final release milestone'ları kapanmış durumdadır. Ayrı ve geçici bir
-single-operator EKS/Argo CD screenshot demonstrasyonu başlatıldı; bu yeni bir
-ürün milestone'u değildir. 2026-10-20'de `terraform` profiliyle hesap
-`833090513321` ve `eu-central-1` doğrulandı. EKS `afterpush-eks` `ACTIVE`
-(Kubernetes 1.36); managed node group'da bir `c7i-flex.large` worker çalışıyor.
-Terraform state beklenen 23 yönetilen kaynağı içeriyor. Operatörün tek güncel
-IPv4 `/32` adresiyle alınan Terraform planı `No changes` verdi. Her iki EKS
-subnet'inde `kubernetes.io/role/internal-elb` etiketi zaten bulundu; internal
-ALB aktif olduğundan Terraform apply veya subnet etiketi değişikliği
-gerekmedi.
+Final release milestone'ları tamamlandı. 2026-10-20'de kısa ömürlü
+single-operator EKS/Argo CD demosu gerçek AWS'te doğrulandı ve aynı gün
+güvenli biçimde kapatıldı; bu yeni bir ürün milestone'u değildir. AWS hesabı
+`833090513321`, `eu-central-1` bölgesi ve `launchforge-admin` kimliği
+doğrulandı. Argo CD'de `afterpush-api-eks` ve `metrics-server` uygulamaları
+`Synced`/`Healthy`; API Deployment `2/2`, HPA metriği `3%/50%`, internal ALB
+hedefleri `2/2 healthy` idi. `/health` ve `/metrics` yanıtları da doğrulandı.
+Deployment kanıtı: [temporary EKS demo evidence](temporary-eks-demo-evidence.md).
 
-AWS Load Balancer Controller ve Argo CD çalışıyor. İlk GitOps sync'i API
-Deployment, Service, Ingress ve HPA kaynaklarını oluşturdu; eski ECR image'ı
-root kullanıcıyla çalıştığı için Kubernetes `runAsNonRoot` denetiminde
-başarısız oldu. Mevcut `platform/Dockerfile.api` sayısal UID `10001` kullanıyor.
-Ondan `linux/amd64` image üretildi, yerel `/health` kontrolü geçti ve immutable
-ECR tag'i `temporary-eks-demo-dc5b434754` olarak yayımlandı (digest
-`sha256:39411062c22b7e9f0e133e0af075be8718313a1687e3a34e184bd6953726ed99`).
-ECR scan API'si bu image için sonuç vermedi; güvenlik taramasının temiz olduğu
-iddia edilmiyor.
+Teardown öncesi Kubernetes Ingress kaldırıldı; controller internal ALB ve
+target group'u temizledi. Ardından fresh Terraform planı yalnızca EKS root'unda
+`0 add, 0 change, 23 destroy` gösterdi ve korumalı lifecycle komutuyla
+uygulandı. Son kontrolde EKS cluster, worker, onun 20 GiB root EBS diski,
+ALB/target group, EKS VPC/subnet/route/Internet Gateway ve EKS IAM kaynakları
+yoktu. EKS remote state boş; shared state üç kaynağıyla korunuyor. Demo için
+kullanılan geçici public API `/32` erişimi cluster ile birlikte kaldırıldı;
+Terraform kaynağı ve Argo CD manifesti private-only/main varsayılanlarına
+döndürüldü.
 
-Geçici `codex/temporary-eks-demo` branch'i yayımlandı; Argo CD'nin API
-Application'ı bu branch'in iki Git kaynağını izliyor, `main` değiştirilmedi.
-20 Ekim 2026 son doğrulamasında `afterpush-api-eks` ve `metrics-server`
-Application'ları `Synced`/`Healthy` idi. Metrics APIService `Available`;
-`kubectl top nodes` ve `kubectl top pods` metrik döndürüyor; HPA CPU
-hedefi `3%/50%`. Deployment `2/2` hazır, iki Pod `Running`; Service iki
-Pod'a endpoint sağlıyor. `/health` `{"status":"ok","service":"afterpush-platform-api"}`
-yanıtı verdi. Internal ALB aktif ve iki target da `healthy`.
+`snap-026638e6765e0067c` kimliği `eu-central-1`'de bulunamadı. Önceki shutdown
+kanıtındaki gerçek PostgreSQL kurtarma snapshot'ı `snap-04c0bf420fd3f6715`
+hesapta mevcut, `completed` ve şifreli olarak korundu. ECR image'ları ve S3
+Terraform state/version history de korundu. Ayrıca `/vpc/afterpush/flow-logs`
+CloudWatch log group'u 1,311 byte, retention ayarı olmadan mevcut; aktif VPC
+Flow Log producer bulunmadığından kayıt depolaması/manual review olarak
+korundu.
 
-Terraform biçim/doğrulama, EKS güvenlik odaklı 4 test, Helm lint/template ve
-image non-root/health smoke kontrolleri geçti. Ayrıntılı kanıt:
-[temporary EKS demo evidence](temporary-eks-demo-evidence.md). Demo, screenshot
-alındığı operator tarafından onaylanana kadar açık bırakılacaktır.
+Cost Explorer'ın mevcut account-level görünümünde 2026-10-01–2026-10-19 için
+`$46.8076168713` Usage ve `-$46.8076169982` Credit kaydı vardı; veri gecikmeli
+ve AfterPush kaynaklarına özgü değil. Aktif demo compute/network kaynağı
+kalmadı, ancak snapshot, ECR, S3 state history ve küçük CloudWatch log
+depolaması maliyet üretebilir; sıfır fatura iddiası yoktur.
 
 ## Son tamamlanan milestone
 
 **Milestone 5 — AWS Cost-Safe Shutdown & Restore** tamamlandı: canlı EKS
 altyapısı state-backed planla kapatıldı ve PostgreSQL verisi için şifreli
-snapshot korundu. Snapshot restore'u, EKS'i yeniden kurma, Argo CD sync'i ve
-uygulama health'i canlı olarak doğrulanmadı. AWS-0164 kaynak topolojisi için
+snapshot korundu. Teardown öncesi geçici demo'da Argo CD sync'i ve workload
+health'i canlı doğrulandı; EKS/snapshot restore'u ve post-restore health
+doğrulanmadı. AWS-0164 kaynak topolojisi için
 önceki koşullu risk kabulü, yeniden kurulumda güvenlik incelemesi gerektirir;
 bu production kanıtı değildir. Ayrıntılı plan: [roadmap.md](roadmap.md);
 kanıt: [final-validation.md](../final-validation.md).
@@ -54,7 +53,8 @@ kanıt: [final-validation.md](../final-validation.md).
 - Helm chart'ı, Argo CD ApplicationSet/proje/RBAC tanımları ve Kubernetes güvenlik kaynakları.
 - Terraform ile AWS/EKS/ECR/IAM/OIDC altyapısı ve ayrı state sınırları.
 - GitHub Actions CI doğrulamaları; manuel ECR image yayınlama workflow'u.
-- Son doğrulanan geniş platform test sonucu: `811 passed`.
+- Son doğrulanan geniş platform test sonucu: `835 passed` (bir mevcut
+  Starlette/httpx deprecation warning'i).
 - Ayrı EKS Argo CD giriş manifestinin chart ve values source'ları `main` branch'ine hizalandı; branch/path/destination sözleşmesi otomatik testle korundu.
 - CI, `terraform/`, `terraform/shared/` ve `terraform/eks/` state köklerini backend'siz olarak ayrı başlatıp doğrulayacak şekilde genişletildi; bu kapsam otomatik workflow testiyle korunuyor.
 - Kimlik doğrulamasız platform API'sinin EKS ALB varsayılanı `internal` yapıldı; generator ve GitOps values dosyaları aynı kontrollü erişim modelini kullanıyor.
@@ -124,9 +124,10 @@ kanıt: [final-validation.md](../final-validation.md).
   kaynak kopyasında Trivy 0.74.0 taraması artık yalnızca AWS-0039 (EKS 1.28+
   default encryption scanner limitation) ve iki AWS-0164 (public managed-node
   subnet) HIGH bulgusunu gösteriyor; CRITICAL bulgu kalmadı.
-- Final doğrulamada platform suite iki grupta `834 passed` verdi; güncel
-  lifecycle ve Terraform security testleri `18 passed`, tüm infrastructure
-  suite'i `426 passed` oldu. Legacy test/lint/build/audit, üç Docker image
+- Önceki gruplu platform doğrulaması `834 passed` idi; son CI-equivalent full
+  suite `835 passed, 1 warning` verdi. Lifecycle ve Terraform security
+  testleri de infrastructure regression kapsamına dahildir. Legacy
+  test/lint/build/audit, üç Docker image
   build ve HIGH/CRITICAL image scan, Helm lint/template ve üç Terraform root
   validate başarılı oldu. Local demo ile temporary Git publication testleri
   de geçti.
@@ -173,13 +174,13 @@ kanıt: [final-validation.md](../final-validation.md).
 
 ## Açık konular
 
-- Temporary demo için public EKS API allowlist'i yalnızca operatörün güncel
-  `/32` adresidir; private endpoint de açıktır. Bu istisna teardown sırasında
-  kaldırılmalıdır. API ve ALB internal kalmalıdır.
+- PostgreSQL snapshot restore'u ve EKS/Argo CD live restore'u denenmedi.
+- İstenen `snap-026638e6765e0067c` bu bölgede bulunamadı; doğrulanmış
+  kurtarma snapshot'ı `snap-04c0bf420fd3f6715` olarak korundu.
+- CloudWatch `/vpc/afterpush/flow-logs` log group'u etiketsiz ve retention
+  ayarsızdır; aktif producer bulunmadı. Logların artık gerekli olmadığı
+  doğrulanana kadar silinmemelidir.
 - ECR image scan sonucu alınamadı; bunu temiz scan sonucu olarak yorumlama.
-- Screenshot onayından sonra geçici EKS altyapısı ayrı, güncel ve gözden
-  geçirilmiş destroy planıyla kapatılacak; bu çalışma sırasında hiçbir teardown
-  yapılmayacaktır.
 - `terraform/` legacy root'u ECS/ALB yanında `force_delete` ECR içerir. Normal
   stop akışının dışında tutulmuştur; tamamen kapatma ancak ayrıca incelenmiş
   image backup ve açık operator onayıyla ele alınabilir.
@@ -192,6 +193,7 @@ kanıt: [final-validation.md](../final-validation.md).
 2. İsteğe bağlı terminal demo videosunu/GIF'ini kaydedip gerçek kapsamı doğru
    temsil edip etmediğini gözden geçirmek; bu, final release'i engellemez.
 
-PR #90 check, merge ve GitHub release durumu zamanla değiştiği için GitHub
-üzerinden doğrulanmalıdır; bu dosya proje milestone kanıtını kaydeder, canlı
-repo durumunun kaynağı değildir.
+PR #90 `main` branch'ine merge edilmiştir. Bu teardown değişikliklerinin yeni
+PR'ı, Actions sonuçları ve GitHub release durumu canlı GitHub üzerinden ayrıca
+doğrulanmalıdır; bu dosya proje kanıtını kaydeder, canlı repo durumunun kaynağı
+değildir.

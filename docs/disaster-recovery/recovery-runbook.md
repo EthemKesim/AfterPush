@@ -815,19 +815,18 @@ The current Blackbox validation is also cluster-internal and therefore proves
 recovery of the Kubernetes Ingress path rather than complete public
 Internet/DNS/TLS availability.
 
-## Temporary AWS EKS screenshot demo (2026-10-20)
+## Temporary AWS EKS screenshot demo (2026-10-20; now torn down)
 
-This short-lived single-operator demo is separate from the completed final
-release and its verified shutdown. The existing `terraform/eks` state now
-manages 23 resources for the running `afterpush-eks` cluster; do not recreate
-the cluster or run destroy as part of screenshot access.
+The short-lived single-operator demo was successfully verified and then
+destroyed on 2026-10-20. There is no running `afterpush-eks` cluster now.
+The following commands are for a future, separately approved restore only;
+they do not recreate the cluster. The final Terraform source uses a
+private-only EKS API endpoint, and the GitOps Application tracks `main`.
 
-The EKS API keeps private access enabled and temporarily allows only the
-operator's current IPv4 `/32` on its public endpoint. The application ALB is
-internal and is not directly reachable from the public internet. Both API and
-metrics-server Argo CD Applications were verified `Synced` and `Healthy`; the
-API has two ready replicas, HPA metrics are available, and both ALB targets are
-healthy.
+Before teardown, both API and metrics-server Argo CD Applications were
+verified `Synced` and `Healthy`; the API had two ready replicas, available HPA
+metrics, and two healthy internal ALB targets. The EKS API's temporary
+single-operator public `/32` access and the ALB were removed with the demo.
 
 To open the Argo CD dashboard from the operator workstation:
 
@@ -857,10 +856,16 @@ kubectl port-forward -n afterpush-dev svc/afterpush-api 8000:80
 curl --fail http://127.0.0.1:8000/health
 ```
 
-The GitOps Application temporarily follows the published
-`codex/temporary-eks-demo` branch; `main` was not changed. The ECR API image
-uses immutable tag `temporary-eks-demo-dc5b434754`. Keep the demo running until
-the operator confirms screenshot capture is complete. Only then, after a
-separate explicit teardown approval and a fresh reviewed Terraform destroy
-plan, may the temporary billable infrastructure be removed. Preserve the
-AfterPush PostgreSQL recovery snapshot, shared ECR, and Terraform state.
+At the end of the demo, the Ingress was removed first so the AWS Load Balancer
+Controller could delete its owned ALB and target group. The reviewed
+Terraform/eks plan then contained exactly 23 destroys and was executed with
+the guarded lifecycle command. The immutable ECR demo image
+`temporary-eks-demo-dc5b434754` remains in the retained `afterpush-api`
+repository; it was not deleted. The original PostgreSQL snapshot
+`snap-04c0bf420fd3f6715`, Terraform backend/state history, and shared ECR
+assets remain preserved. A request referenced `snap-026638e6765e0067c`, but
+that ID was not found in `eu-central-1`.
+
+The final post-teardown inventory found no EKS cluster, worker, demo VPC,
+Ingress-created ALB, or target group. EKS restore, PostgreSQL snapshot restore,
+Argo CD bootstrap, and post-restore application health have not been tested.

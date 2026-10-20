@@ -10,10 +10,10 @@ resource "aws_eks_cluster" "main" {
     ]
 
     endpoint_private_access = true
-    # Temporary screenshot-demo access remains restricted to one operator /32.
-    # Private access stays enabled. Do not use 0.0.0.0/0 here.
-    endpoint_public_access = true
-    public_access_cidrs    = var.temporary_operator_public_access_cidrs
+    # The control plane is reachable only from the VPC. Operators need a
+    # reviewed private access path (for example VPN, a bastion, or SSM) before
+    # administering this cluster.
+    endpoint_public_access = false
   }
 
   depends_on = [

@@ -167,20 +167,25 @@ the tool never promises a zero AWS bill.
 
 ## Verified AWS shutdown
 
-The live AfterPush EKS environment was shut down on 2026-10-19 after
-account/region, ownership, state, backup, and destroy-plan checks. The EKS
-cluster, managed node group and worker, VPC networking, and EKS-scoped IAM
-resources are gone. The versioned Terraform S3 backend, shared GitHub OIDC
-delivery role, and ECR recovery repositories remain.
+The original live AfterPush EKS environment was shut down on 2026-10-19. A
+short-lived EKS/Argo CD screenshot demo was later deployed, verified
+`Healthy`/`Synced`, and shut down on 2026-10-20 from a fresh 23-resource
+Terraform destroy plan. The EKS cluster, worker/root disk, demo internal ALB
+and target group, demo VPC/networking, and EKS-scoped IAM resources are absent.
+The final demo evidence and post-teardown AWS inventory are recorded in the
+[temporary EKS evidence](docs/agent/temporary-eks-demo-evidence.md).
 
 The PostgreSQL StatefulSet was gracefully stopped and its detached 5 GiB EBS
 volume was snapshotted as encrypted recovery asset
 `snap-04c0bf420fd3f6715`; only after completion was the original volume
-deleted. The snapshot, retained ECR image storage, and versioned Terraform
-state may continue to incur charges. A live restore, snapshot-based database
-recovery, Argo CD bootstrap, and workload health check have **not** been
-performed. See the [final validation report](docs/final-validation.md) and
-[recovery runbook](docs/runbooks/aws-cost-safe-operations.md) before restoring.
+deleted. A later request referenced `snap-026638e6765e0067c`, which was not
+found in `eu-central-1`; the verified `snap-04...` recovery point remains
+completed and encrypted. The snapshot, retained ECR image storage, versioned
+Terraform state, and a tiny orphaned CloudWatch flow-log group may still incur
+storage charges. Cost Explorer showed account-level usage offset by credits;
+this is not proof of a zero bill. A live restore and snapshot-based database
+recovery have **not** been performed. See the [final validation report](docs/final-validation.md)
+and [recovery runbook](docs/runbooks/aws-cost-safe-operations.md) before restoring.
 
 ## Further documentation
 
@@ -202,10 +207,12 @@ performed. See the [final validation report](docs/final-validation.md) and
 
 AfterPush is a portfolio-grade, single-operator prototype—not a public,
 multi-tenant SaaS or a fully managed production platform. The final release
-does not claim that live AWS/EKS worker activation, Argo CD reconciliation, or
-production database migration has been performed. Those operations require
-reviewed image digests, secrets, configuration, scoped RBAC, and explicit
-operator approval.
+was followed by a temporary EKS demo whose Argo CD reconciliation and
+application health were verified before shutdown. This is not a production
+readiness or live restore claim. Runtime-reconciliation worker activation,
+snapshot-based database recovery, and production migration remain unverified.
+Future live operations require reviewed image digests, secrets, configuration,
+scoped RBAC, and explicit operator approval.
 
 The `app/` directory remains a legacy TypeScript/Node.js demo application. It
 is retained and independently validated in CI; the FastAPI platform under
