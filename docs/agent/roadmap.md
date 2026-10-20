@@ -219,8 +219,12 @@ uygulaması gerekmedi.
 `runAsNonRoot` ile uyumsuzdu. UID `10001` kullanan API image'ı immutable ECR
 tag'i `temporary-eks-demo-dc5b434754` ile yayımlandı. Metrics-server mevcut
 GitOps Application'ı üzerinden kuruldu ve metrics API kullanılabilir hale
-geldi. Uygulama GitOps değerleri geçici `codex/temporary-eks-demo` branch'inde
-yayınlanacak; demo Application bu branch'i izler, `main` değiştirilmeyecek.
+geldi. Uygulama GitOps değerleri `codex/temporary-eks-demo` branch'inde
+yayımlandı; demo Application bu branch'i izler, `main` değiştirilmedi. Son
+doğrulama: API ve metrics-server Applications `Synced`/`Healthy`; API
+Deployment `2/2`, HPA metriği `3%/50%`, internal ALB targets `2/2 healthy`.
+ECR image scan sonucu alınamadı; vulnerability-free iddiası yoktur. Kanıt
+[temporary EKS demo evidence](temporary-eks-demo-evidence.md) dosyasındadır.
 
 Screenshot'lar tamamlandığı operator tarafından onaylanana kadar kaynaklar
 açık kalacaktır. Sonrasında güncel state ve tam kapsamı doğrulanmış ayrı bir

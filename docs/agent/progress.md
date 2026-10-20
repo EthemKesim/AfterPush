@@ -5,31 +5,37 @@
 Final release milestone'ları kapanmış durumdadır. Ayrı ve geçici bir
 single-operator EKS/Argo CD screenshot demonstrasyonu başlatıldı; bu yeni bir
 ürün milestone'u değildir. 2026-10-20'de `terraform` profiliyle hesap
-`833090513321` ve `eu-central-1` doğrulandı. EKS `afterpush-eks` is `ACTIVE`
-(Kubernetes 1.36), its managed node group has one running `c7i-flex.large`
-node, and the Terraform state contains the expected 23 managed resources.
-Terraform plan with the current operator CIDR (`109.175.77.4/32`) reported no
-changes. Both cluster subnets already have the `kubernetes.io/role/internal-elb`
-tag; the internal ALB is active, so no Terraform apply or subnet-tag mutation
-was needed.
+`833090513321` ve `eu-central-1` doğrulandı. EKS `afterpush-eks` `ACTIVE`
+(Kubernetes 1.36); managed node group'da bir `c7i-flex.large` worker çalışıyor.
+Terraform state beklenen 23 yönetilen kaynağı içeriyor. Operatörün tek güncel
+IPv4 `/32` adresiyle alınan Terraform planı `No changes` verdi. Her iki EKS
+subnet'inde `kubernetes.io/role/internal-elb` etiketi zaten bulundu; internal
+ALB aktif olduğundan Terraform apply veya subnet etiketi değişikliği
+gerekmedi.
 
-AWS Load Balancer Controller and Argo CD are running. The first GitOps sync
-created the API Deployment, Service, Ingress, and HPA, but the old ECR image
-failed Kubernetes `runAsNonRoot` because that image's configured user is root.
-The current `platform/Dockerfile.api` sets numeric UID `10001`. A fresh
-`linux/amd64` image built from it passed a local `/health` smoke test and was
-published as the immutable ECR tag
-`temporary-eks-demo-dc5b434754` (digest
+AWS Load Balancer Controller ve Argo CD çalışıyor. İlk GitOps sync'i API
+Deployment, Service, Ingress ve HPA kaynaklarını oluşturdu; eski ECR image'ı
+root kullanıcıyla çalıştığı için Kubernetes `runAsNonRoot` denetiminde
+başarısız oldu. Mevcut `platform/Dockerfile.api` sayısal UID `10001` kullanıyor.
+Ondan `linux/amd64` image üretildi, yerel `/health` kontrolü geçti ve immutable
+ECR tag'i `temporary-eks-demo-dc5b434754` olarak yayımlandı (digest
 `sha256:39411062c22b7e9f0e133e0af075be8718313a1687e3a34e184bd6953726ed99`).
-Image scan results were not yet available at this checkpoint.
+ECR scan API'si bu image için sonuç vermedi; güvenlik taramasının temiz olduğu
+iddia edilmiyor.
 
-The existing GitOps metrics-server Application was registered; it is
-`Synced`/`Healthy`, the metrics APIService reports `Available`, and `kubectl
-top nodes` returns metrics. The API still needs the temporary branch to be
-published and selected by its Argo CD Application before the changed image can
-be synchronized. After that, verify HPA metrics, application health, internal
-ALB target health, and final `Healthy`/`Synced` status. Keep the AWS environment
-running until the operator confirms screenshot capture is complete.
+Geçici `codex/temporary-eks-demo` branch'i yayımlandı; Argo CD'nin API
+Application'ı bu branch'in iki Git kaynağını izliyor, `main` değiştirilmedi.
+20 Ekim 2026 son doğrulamasında `afterpush-api-eks` ve `metrics-server`
+Application'ları `Synced`/`Healthy` idi. Metrics APIService `Available`;
+`kubectl top nodes` ve `kubectl top pods` metrik döndürüyor; HPA CPU
+hedefi `3%/50%`. Deployment `2/2` hazır, iki Pod `Running`; Service iki
+Pod'a endpoint sağlıyor. `/health` `{"status":"ok","service":"afterpush-platform-api"}`
+yanıtı verdi. Internal ALB aktif ve iki target da `healthy`.
+
+Terraform biçim/doğrulama, EKS güvenlik odaklı 4 test, Helm lint/template ve
+image non-root/health smoke kontrolleri geçti. Ayrıntılı kanıt:
+[temporary EKS demo evidence](temporary-eks-demo-evidence.md). Demo, screenshot
+alındığı operator tarafından onaylanana kadar açık bırakılacaktır.
 
 ## Son tamamlanan milestone
 
@@ -170,8 +176,7 @@ kanıt: [final-validation.md](../final-validation.md).
 - Temporary demo için public EKS API allowlist'i yalnızca operatörün güncel
   `/32` adresidir; private endpoint de açıktır. Bu istisna teardown sırasında
   kaldırılmalıdır. API ve ALB internal kalmalıdır.
-- ECR tag taraması henüz tamamlanmadı. EKS HPA, ALB target health ve API
-  deployment'ının yeni image ile runtime health doğrulaması bekleniyor.
+- ECR image scan sonucu alınamadı; bunu temiz scan sonucu olarak yorumlama.
 - Screenshot onayından sonra geçici EKS altyapısı ayrı, güncel ve gözden
   geçirilmiş destroy planıyla kapatılacak; bu çalışma sırasında hiçbir teardown
   yapılmayacaktır.

@@ -814,3 +814,53 @@ Automated infrastructure/bootstrap process
 The current Blackbox validation is also cluster-internal and therefore proves
 recovery of the Kubernetes Ingress path rather than complete public
 Internet/DNS/TLS availability.
+
+## Temporary AWS EKS screenshot demo (2026-10-20)
+
+This short-lived single-operator demo is separate from the completed final
+release and its verified shutdown. The existing `terraform/eks` state now
+manages 23 resources for the running `afterpush-eks` cluster; do not recreate
+the cluster or run destroy as part of screenshot access.
+
+The EKS API keeps private access enabled and temporarily allows only the
+operator's current IPv4 `/32` on its public endpoint. The application ALB is
+internal and is not directly reachable from the public internet. Both API and
+metrics-server Argo CD Applications were verified `Synced` and `Healthy`; the
+API has two ready replicas, HPA metrics are available, and both ALB targets are
+healthy.
+
+To open the Argo CD dashboard from the operator workstation:
+
+```bash
+aws eks update-kubeconfig \
+  --name afterpush-eks \
+  --region eu-central-1 \
+  --profile terraform
+
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+```
+
+Open `https://localhost:8080` and accept the local Argo CD TLS certificate
+warning. The initial username is `admin`. If the initial admin Secret still
+exists, retrieve its password locally without sharing it:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 --decode
+echo
+```
+
+The API health endpoint can be checked through a separate local tunnel:
+
+```bash
+kubectl port-forward -n afterpush-dev svc/afterpush-api 8000:80
+curl --fail http://127.0.0.1:8000/health
+```
+
+The GitOps Application temporarily follows the published
+`codex/temporary-eks-demo` branch; `main` was not changed. The ECR API image
+uses immutable tag `temporary-eks-demo-dc5b434754`. Keep the demo running until
+the operator confirms screenshot capture is complete. Only then, after a
+separate explicit teardown approval and a fresh reviewed Terraform destroy
+plan, may the temporary billable infrastructure be removed. Preserve the
+AfterPush PostgreSQL recovery snapshot, shared ECR, and Terraform state.
