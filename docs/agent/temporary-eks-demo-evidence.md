@@ -26,7 +26,10 @@ environment must remain running until the operator confirms screenshot capture.
 ## GitOps and workload
 
 - Temporary branch: `codex/temporary-eks-demo`.
-- Branch commit at initial deployment: `ca0d08e56c3a4551df4f74d446501ef022ca438d`.
+- Branch head and Argo CD source revision at final verification:
+  `c0f172899128ffb7f733974530d35b43a071a2f2`.
+- Initial workload deployment commit:
+  `ca0d08e56c3a4551df4f74d446501ef022ca438d`.
 - The Argo CD Application's chart and values sources both follow this temporary
   branch; `main` was not changed.
 - `afterpush-api-eks`: `Synced`, `Healthy`.
@@ -76,6 +79,11 @@ an automatically assigned public IPv4 address on the worker, and an internal
 Application Load Balancer with a target group. EKS control-plane hours,
 EC2 hours, public IPv4 hours, EBS storage, ALB hours/LCUs, and data transfer can
 continue to incur charges. There is no NAT Gateway or allocated Elastic IP.
+At published list rates, a rough 730-hour baseline is about `$169/month`:
+approximately `$73` for standard-support EKS cluster hours, `$70.63` for the
+worker, `$1.90` for its 20 GiB gp3 volume, `$3.65` for its in-use public IPv4,
+and `$19.71` for the ALB hourly charge. This excludes ALB LCU usage, traffic,
+logs, and other variable usage; it is not a bill or a credit-adjusted estimate.
 
 The existing encrypted PostgreSQL recovery snapshot, Terraform state and
 shared ECR repositories remain outside the demo cleanup scope and must be
