@@ -128,6 +128,47 @@ def test_live_inventory_refuses_wrong_account(tmp_path: Path):
     assert "Refusing AWS account 999999999999" in result.stderr
 
 
+def test_live_inventory_includes_all_cloudwatch_groups_and_owned_snapshots(tmp_path: Path):
+    calls = tmp_path / "aws-calls.txt"
+    aws = _executable(
+        tmp_path / "aws",
+        "#!/usr/bin/env python3\n"
+        "import json, sys\n"
+        f"calls = {str(calls)!r}\n"
+        "with open(calls, 'a', encoding='utf-8') as stream:\n"
+        "    stream.write(' '.join(sys.argv[1:]) + '\\n')\n"
+        "if 'get-caller-identity' in sys.argv:\n"
+        "    print(json.dumps({'Account': '123456789012'}))\n"
+        "elif 'describe-log-groups' in sys.argv:\n"
+        "    print(json.dumps({'logGroups': [{'logGroupName': '/vpc/afterpush/flow-logs'}]}))\n"
+        "elif 'describe-snapshots' in sys.argv:\n"
+        "    print(json.dumps({'Snapshots': [{'SnapshotId': 'snap-test'}]}))\n"
+        "else:\n"
+        "    print('{}')\n",
+    )
+
+    result = _run(
+        "verify",
+        "--live",
+        "--account-id",
+        "123456789012",
+        "--profile",
+        "test-profile",
+        "--aws-bin",
+        str(aws),
+    )
+
+    assert result.returncode == 0
+    assert "Mode: read-only AWS inventory" in result.stdout
+    assert "No AWS, Kubernetes, Terraform backend, or remote state was contacted" not in result.stdout
+    assert "CloudWatch log groups (account-wide; review ownership): response received (1 listed item(s))" in result.stdout
+    assert "EBS snapshots (account-owned; review ownership): response received (1 listed item(s))" in result.stdout
+    recorded_calls = calls.read_text(encoding="utf-8")
+    assert "logs describe-log-groups --output json" in recorded_calls
+    assert "--log-group-name-prefix" not in recorded_calls
+    assert "ec2 describe-snapshots --owner-ids self --output json" in recorded_calls
+
+
 def test_start_refuses_missing_terraform_state(tmp_path: Path):
     aws = _fake_aws(tmp_path / "aws", "123456789012")
     terraform = _fake_terraform(tmp_path / "terraform", "", state_exit=1)

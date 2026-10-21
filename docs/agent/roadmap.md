@@ -204,13 +204,40 @@ AfterPush ancak şu koşullarda **FINAL RELEASE** sayılır:
 
 Bu noktadan sonra optional özellikler final release'i engellemez. Yalnızca kritik hata veya güvenlik sorunu bakım işi olarak ele alınır.
 
+## Geçici canlı EKS demo (2026-10-20; tamamlandı ve kapatıldı)
+
+Final release kapsamı genişletilmeden yürütülen single-operator EKS/Argo CD
+gösterimi tamamlandı; bu bir Milestone 6 değildir. Demo yalnızca
+`terraform/eks` state root'unu kullandı; shared/legacy root'lara dokunulmadı.
+API ve metrics-server Argo CD Applications `Synced`/`Healthy`, API Deployment
+`2/2` ready, HPA `3%/50%`, internal ALB hedefleri `2/2 healthy` ve health
+endpoint başarılı olarak doğrulandı. ECR immutable image tag'i
+`temporary-eks-demo-dc5b434754` ve digest'i kanıt belgesinde kayıtlıdır.
+ECR taraması sonucu alınamadı; temiz tarama iddiası yoktur.
+
+2026-10-20'de Kubernetes Ingress controller üzerinden kaldırıldı, internal ALB
+ve target group silindi. Fresh Terraform planı `0 add, 0 change, 23 destroy`
+gösterdi; `scripts/aws-env.sh stop --execute` yalnızca `eks` hedefinde
+çalıştırıldı. AWS kontrolleri EKS cluster/node group/worker/root disk,
+EKS VPC/networking, ALB/target group, NAT/EIP ve EKS-scoped IAM kaynaklarının
+kaldırıldığını; EKS state'in boş, shared state'in üç kaynakla korunduğunu
+doğruladı.
+
+`snap-026638e6765e0067c` eu-central-1'de bulunamadı. Doğrulanmış encrypted
+PostgreSQL snapshot'ı `snap-04c0bf420fd3f6715` tamamlanmış durumda ve korunuyor.
+Terraform S3 state/version history ve üç mevcut ECR repository'sindeki image
+manifestleri korundu. Restore, snapshot-based database recovery ve production
+readiness doğrulanmadı. Ayrıntılar [demo kanıtında](temporary-eks-demo-evidence.md)
+ve [AWS operasyon runbook'unda](../runbooks/aws-cost-safe-operations.md).
+
 ## Milestone 5 — AWS Cost-Safe Shutdown & Restore (shutdown complete; live restore unverified)
 
 Bu milestone, canlı AfterPush EKS altyapısının güvenli şekilde kapatılması ve
 geri yükleme varlıklarının korunmasıyla tamamlandı. `scripts/aws-env.sh`
 varsayılan olarak preview üretir; yıkıcı/başlatıcı canlı işlemler açık operator
-onayı gerektirir. Shutdown canlı doğrulandı; restore ve uygulama health'i canlı
-olarak çalıştırılmadı.
+onayı gerektirir. Shutdown canlı doğrulandı; geçici screenshot demo'sunda
+teardown öncesi Argo CD sync ve workload health de canlı doğrulandı. Restore ve
+post-restore health çalıştırılmadı.
 
 ### Amaç ve görevler
 
@@ -258,5 +285,6 @@ olarak çalıştırılmadı.
 
 Tamamlanma sonucu: Milestone 5'in kod, live shutdown ve dokümantasyon kabul
 kriterleri karşılandı. EBS snapshot'ı `snap-04c0bf420fd3f6715`; state/backend,
-shared ECR ve OIDC kurtarma kaynakları retained durumdadır. Restore, Argo CD
-sync ve runtime health live olarak doğrulanmamıştır.
+shared ECR ve OIDC kurtarma kaynakları retained durumdadır. Geçici demo'da
+Argo CD sync ve runtime health teardown öncesi doğrulandı; EKS/DB restore,
+Argo CD bootstrap ve post-restore health doğrulanmamıştır.

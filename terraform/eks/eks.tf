@@ -10,7 +10,7 @@ resource "aws_eks_cluster" "main" {
     ]
 
     endpoint_private_access = true
-    # The control plane is reachable only from the VPC.  Operators need a
+    # The control plane is reachable only from the VPC. Operators need a
     # reviewed private access path (for example VPN, a bastion, or SSM) before
     # administering this cluster.
     endpoint_public_access = false

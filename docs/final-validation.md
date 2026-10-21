@@ -1,8 +1,8 @@
 # Final validation and release-readiness review
 
-**Review date:** 2026-10-19
-**Repository baseline:** `main` at `3c14b7f` (merged PR #89)
-**Review branch:** `codex/aws-cost-safe-operations`
+**Review date:** 2026-10-20
+**Repository baseline:** `main` at `dc5b434` (merged PR #90)
+**Review branch:** `chore/finalize-eks-demo-teardown`
 
 This report records the final review evidence for the portfolio prototype. A
 result marked PASS proves only the stated local, CI, or static scope; it does
@@ -12,17 +12,18 @@ not prove a live AWS/EKS deployment.
 
 | Area | Outcome | Evidence type |
 | --- | --- | --- |
-| FastAPI platform tests | PASS | 834 passed across two local `afterpush_test` PostgreSQL groups |
+| FastAPI platform tests | PASS | 835 passed, 1 deprecation warning against local `afterpush_test` |
 | Legacy Node application | PASS | Local test, lint, build, dependency audit |
 | Container builds and image scans | PASS | Local Docker and Trivy |
 | Helm, GitOps, and Argo CD source checks | PASS | Offline lint, render, and static inspection |
-| Terraform format and configuration validation | PASS | Backend-disabled temporary copies |
+| Terraform format and configuration validation | PASS | All three roots initialized backend-disabled and validated |
 | Terraform security configuration | PASS — scoped acceptance | Static Trivy scan plus documented single-operator risk acceptance |
 | AWS lifecycle safety tool | PASS — local/mock and live shutdown | Preview/guard tests plus state-backed EKS teardown; live restore not verified |
 | GitHub Actions for the prior review branch | PASS | GitHub Actions run #173 |
-| GitHub Actions before final repository changes | PASS | Earlier PR #90 head `758fd1d` had all three checks pass; consult PR #90 for current head status |
+| GitHub Actions before final repository changes | PASS — historical | Earlier PR #90 head `758fd1d` had all three checks pass; this is not validation of the current teardown PR |
 | Live AWS shutdown | PASS | EKS state empty; cluster, worker, VPC, and original PostgreSQL volume removed |
-| Live AWS/EKS restore, Argo CD, and runtime reconciliation | NOT VERIFIED | No restore, sync, or post-restore health check was performed |
+| Temporary EKS screenshot demo | PASS — deployed, healthy, then shut down | Argo CD `Synced`/`Healthy`, API `2/2`, HPA `3%/50%`, ALB targets healthy; no restore claim |
+| Live EKS/PostgreSQL restore and post-restore reconciliation | NOT VERIFIED | Temporary demo sync/health was verified before teardown; no restore or post-restore check was performed |
 
 ## Automated tests
 
@@ -56,6 +57,19 @@ Warning: Starlette's `TestClient` reports that its current `httpx` integration
 is deprecated. It did not fail a test; dependency compatibility should be
 reviewed when the test stack is upgraded.
 
+After the inventory regression test was added, the CI-equivalent full-suite
+command was rerun after applying migrations to the local test database:
+
+```bash
+cd platform
+python -m alembic upgrade head
+cd ..
+python -m pytest platform/tests -q
+```
+
+Result: **835 passed, 1 warning**. This current result supersedes the earlier
+grouped run count above.
+
 ### Legacy demo application
 
 **PASS** — from `app/`:
@@ -88,9 +102,9 @@ rollout, or live runtime health.
 
 | Image | Runtime check | User | HIGH/CRITICAL Trivy findings |
 | --- | --- | --- | --- |
-| `afterpush-legacy:m4` | `/health` returned healthy | `node` | 0 |
-| `afterpush-platform-api:m4` | `/health` and `/metrics` succeeded | `10001` | 0 |
-| `afterpush-runtime-worker:m4` | reconciliation worker `--help` succeeded | `10001` | 0 |
+| `afterpush-api:ci` | `/health` returned healthy | `node` | 0 |
+| `afterpush-platform-api:ci` | `/health` and `/metrics` succeeded | `10001` | 0 |
+| `afterpush-runtime-worker:ci` | reconciliation worker `--help` succeeded | `10001` | 0 |
 
 The legacy Dockerfile now uses the base image's non-root `node` user. Both
 application and platform build contexts exclude `.env` files and private-key
@@ -159,6 +173,15 @@ terraform fmt -check -recursive
 terraform -chdir=<clean-copy/root> init -backend=false -input=false
 terraform -chdir=<clean-copy/root> validate
 ```
+
+On the final PR working tree, recursive formatting passed and each root
+initialized with `-backend=false` and validated. The CI-configured Trivy scan
+was run against a clean source copy that excluded ignored local state, provider
+caches, and historical plan snapshots. It exited successfully with
+`exit-code: 0` and reported the same one AWS-0039 HIGH scanner limitation and
+two AWS-0164 HIGH public-subnet findings documented below; it reported no
+CRITICAL findings. The workflow's non-blocking scan policy does not mean every
+finding was removed.
 
 The static review confirms separate primary, shared (ECR/GitHub OIDC), and EKS
 roots. The GitHub Actions OIDC trust is limited to the repository's `main`
@@ -267,7 +290,7 @@ health. After a restored EKS cluster, the operator must use private API access,
 provide secrets out of band, and follow the existing disaster-recovery runbook
 to bootstrap Argo CD and observe GitOps reconciliation.
 
-## Final live shutdown and cost audit
+## Original live shutdown and cost audit (2026-10-19)
 
 On 2026-10-19, `aws sts get-caller-identity --profile terraform` verified the
 intended account and `eu-central-1` region. The `terraform/eks/` state contained
@@ -289,11 +312,14 @@ Direct post-shutdown AWS checks confirmed:
   NAT Gateway, Elastic IP, load balancer, or target group.
 - No ECS clusters/services, RDS instances, DynamoDB tables, or Lambda
   resources named for AfterPush in the 17 enabled AWS regions checked.
-- No AfterPush CloudWatch alarms/log groups, SNS topics, or Route 53 hosted
-  zones in the target region. EKS-specific IAM roles/OIDC provider are gone;
+- No AfterPush CloudWatch alarms, SNS topics, or Route 53 hosted zones in the
+  target region. The later account-wide log-group query found one existing
+  `/vpc/afterpush/flow-logs` group; the earlier `/aws`-prefix query had missed
+  it. EKS-specific IAM roles/OIDC provider are gone;
   the GitHub Actions OIDC provider and `afterpush-github-actions-ecr` role
   remain for image delivery.
-- Three ECR repositories and 12 image manifests remain:
+- At the original shutdown, three ECR repositories and 12 image manifests
+  remained:
   `afterpush-api`, `afterpush-platform-api`, and
   `afterpush-platform-worker`. Their reported image-size metadata sums to
   approximately 0.62 GiB; this is not a precise billable unique-layer total.
@@ -325,6 +351,72 @@ access was enabled with `0.0.0.0/0`, despite the committed private-only
 configuration. Destroying the cluster removed the exposure. A future restore
 must use private administrator access and verify the live endpoint and
 security groups.
+
+## Temporary EKS demo and final re-teardown (2026-10-20)
+
+The temporary `afterpush-eks` environment was brought up only to complete the
+single-operator screenshot demonstration. The workload reached Argo CD
+`Synced`/`Healthy` for both the API and metrics-server Applications; the API
+Deployment was `2/2` ready, HPA CPU was `3%/50%`, the metrics API was
+available, and both internal ALB targets were healthy. The health endpoint
+returned the expected `afterpush-platform-api` response. These results are
+deployment evidence only, not production-readiness or restore evidence.
+
+Before Terraform cleanup, the Kubernetes Ingress was deleted so its controller
+removed the cluster-tagged internal ALB and target group. The fresh EKS destroy
+plan contained exactly 23 deletes and no add/change actions. The repository's
+guarded lifecycle command completed the destroy. Read-only checks then found
+no EKS cluster, running EC2 worker, worker root EBS volume, ALB, target group,
+demo VPC/subnets/Internet Gateway, NAT Gateway, or allocated EIP in
+`eu-central-1`. The EKS Terraform state is empty; shared state retains three
+resources. The source configuration was returned to private-only EKS API
+access and `main` GitOps revisions.
+
+The specifically requested snapshot `snap-026638e6765e0067c` was not found in
+`eu-central-1`. The prior verified PostgreSQL snapshot
+`snap-04c0bf420fd3f6715` remains `completed`, encrypted, 5 GiB, and owned by
+account `833090513321`; its source volume has been deleted and a restore has
+not been tested.
+
+Post-teardown inventory identified the following remaining known AfterPush
+storage exposures:
+
+- Three ECR repositories hold 15 manifests with 777,307,835 bytes of reported
+  image size (about 0.724 GiB before layer deduplication).
+- The versioned, AES256 S3 state bucket has 164 object versions totaling
+  2,635,331 bytes; the current EKS state object is an accessible 476-byte
+  empty state.
+- CloudWatch log group `/vpc/afterpush/flow-logs` contains 1,311 bytes, has no
+  tags and no retention policy. Terraform source expects 30-day retention, but
+  no active VPC Flow Log producer exists. The group is kept for manual
+  audit-retention review because it is outside the EKS state root.
+- The AWS-managed `alias/aws/ebs` key is enabled for the snapshot; IAM/OIDC
+  resources do not run compute.
+
+Cost Explorer's available account-level period 2026-10-01 through
+2026-10-19 showed `$46.8076168713` Usage and `-$46.8076169982` Credits. This
+is delayed data, includes unrelated services, and is not attributable to the
+retained items. Credits explain the near-zero/negative display; they do not
+prove a zero bill. A rough retained-storage estimate is `$0.25–$0.33/month`,
+primarily snapshot and ECR storage, with S3 history and the current log group
+below a cent. It excludes transfers, requests, future log ingestion, taxes,
+and unrelated account resources; it is not an invoice.
+
+The lifecycle inventory was tightened after the audit exposed a false
+negative: `verify --live` now includes account-owned EBS snapshots and
+account-wide CloudWatch log groups, and its output correctly states that AWS
+APIs were queried without resources being changed.
+
+Local checks on this branch: Platform suite **835 passed, 1 existing
+deprecation warning**.
+The legacy app `npm ci`, tests (**3 passed**), lint, TypeScript build,
+HIGH/CRITICAL Trivy image scan, container health test, and npm audit passed
+after a semver-compatible lockfile update resolved a pre-existing HIGH Vite
+advisory. The local runtime was Node 26.8.1, while GitHub Actions specifies
+Node 22. CLI validation/rendering, API and worker image builds, container
+health/metrics, worker help, Helm lint, and Helm rendering passed. These are
+local results; the current PR's GitHub Actions checks must be reported from
+GitHub and are not inferred from this validation.
 
 ## CI, documentation, and repository hygiene
 
@@ -368,15 +460,16 @@ counts.
 
 ## Known limitations and release decision
 
-Live EKS deployment, private API administrator access, Argo CD sync,
-Kubernetes runtime verification, activation of the reconciliation CronJob,
-remote GitOps publication, and production database migration were not
-performed. They remain intentionally unverified.
+The temporary EKS deployment, Argo CD synchronization, workload health, and
+internal ALB targets were verified before teardown. A private API restore,
+live EKS recreation, PostgreSQL snapshot restore, activation of the
+reconciliation CronJob, and production database migration were not performed.
+They remain intentionally unverified.
 
 The project is documented as a scoped `v1.0.0` portfolio prototype, not a
 production platform. AWS-0164 remains a conditional source-design risk for
-any future EKS restore and is not a production-readiness claim. Live shutdown
-is verified; live EKS restore, Argo CD sync, and Kubernetes runtime health are
-not. GitHub check, merge, tag, and release status are time-sensitive and are
-reported separately from this dated validation evidence; verify the current
-state on [PR #90](https://github.com/EthemKesim/AfterPush/pull/90).
+any future EKS restore and is not a production-readiness claim. The temporary
+demo was shut down after its live health verification; EKS restore and
+PostgreSQL recovery remain untested. GitHub check, merge, tag, and release
+status are time-sensitive and are reported separately from this dated
+validation evidence; verify the current PR checks before merging.

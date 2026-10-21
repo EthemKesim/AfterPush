@@ -814,3 +814,58 @@ Automated infrastructure/bootstrap process
 The current Blackbox validation is also cluster-internal and therefore proves
 recovery of the Kubernetes Ingress path rather than complete public
 Internet/DNS/TLS availability.
+
+## Temporary AWS EKS screenshot demo (2026-10-20; now torn down)
+
+The short-lived single-operator demo was successfully verified and then
+destroyed on 2026-10-20. There is no running `afterpush-eks` cluster now.
+The following commands are for a future, separately approved restore only;
+they do not recreate the cluster. The final Terraform source uses a
+private-only EKS API endpoint, and the GitOps Application tracks `main`.
+
+Before teardown, both API and metrics-server Argo CD Applications were
+verified `Synced` and `Healthy`; the API had two ready replicas, available HPA
+metrics, and two healthy internal ALB targets. The EKS API's temporary
+single-operator public `/32` access and the ALB were removed with the demo.
+
+To open the Argo CD dashboard from the operator workstation:
+
+```bash
+aws eks update-kubeconfig \
+  --name afterpush-eks \
+  --region eu-central-1 \
+  --profile terraform
+
+kubectl port-forward -n argocd svc/argocd-server 8080:443
+```
+
+Open `https://localhost:8080` and accept the local Argo CD TLS certificate
+warning. The initial username is `admin`. If the initial admin Secret still
+exists, retrieve its password locally without sharing it:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 --decode
+echo
+```
+
+The API health endpoint can be checked through a separate local tunnel:
+
+```bash
+kubectl port-forward -n afterpush-dev svc/afterpush-api 8000:80
+curl --fail http://127.0.0.1:8000/health
+```
+
+At the end of the demo, the Ingress was removed first so the AWS Load Balancer
+Controller could delete its owned ALB and target group. The reviewed
+Terraform/eks plan then contained exactly 23 destroys and was executed with
+the guarded lifecycle command. The immutable ECR demo image
+`temporary-eks-demo-dc5b434754` remains in the retained `afterpush-api`
+repository; it was not deleted. The original PostgreSQL snapshot
+`snap-04c0bf420fd3f6715`, Terraform backend/state history, and shared ECR
+assets remain preserved. A request referenced `snap-026638e6765e0067c`, but
+that ID was not found in `eu-central-1`.
+
+The final post-teardown inventory found no EKS cluster, worker, demo VPC,
+Ingress-created ALB, or target group. EKS restore, PostgreSQL snapshot restore,
+Argo CD bootstrap, and post-restore application health have not been tested.
